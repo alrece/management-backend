@@ -1,74 +1,78 @@
 package middleware
 
 import (
+	"context"
+	"net/http"
 	"strings"
 	"time"
 
+	"management-backend/internal/auth"
 	"management-backend/internal/config"
 	"management-backend/pkg/errcode"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"github.com/redis/go-redis/v9"
 )
 
-// Claims JWT 载荷
-type Claims struct {
-	UserID   int64  `json:"userId"`
-	Username string `json:"username"`
-	TenantID int64  `json:"tenantId"`
-	jwt.RegisteredClaims
+var blacklist *auth.Blacklist
+
+// InitAuth 初始化认证组件（main.go 调用）
+func InitAuth(rdb *redis.Client) {
+	blacklist = auth.NewBlacklist(rdb)
 }
 
-// GenerateToken 生成 JWT Token
-func GenerateToken(userID int64, username string, tenantID int64) (string, error) {
-	now := time.Now()
-	claims := Claims{
-		UserID:   userID,
-		Username: username,
-		TenantID: tenantID,
-		RegisteredClaims: jwt.RegisteredClaims{
-			Issuer:    config.C.JWT.Issuer,
-			ExpiresAt: jwt.NewNumericDate(now.Add(time.Duration(config.C.JWT.AccessExpire) * time.Second)),
-			IssuedAt:  jwt.NewNumericDate(now),
-		},
-	}
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	return token.SignedString([]byte(config.C.JWT.Secret))
-}
-
-// ParseToken 解析 JWT Token
-func ParseToken(tokenStr string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
-		return []byte(config.C.JWT.Secret), nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	if claims, ok := token.Claims.(*Claims); ok && token.Valid {
-		return claims, nil
-	}
-	return nil, errcode.Err(errcode.TokenInvalid)
-}
-
-// Auth JWT 认证中间件
+// Auth JWT 认证中间件（检查黑名单 + 用户级吊销）
 func Auth() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr := c.GetHeader("Authorization")
 		if tokenStr == "" {
-			c.AbortWithStatusJSON(401, gin.H{"code": 401, "msg": "未授权，请先登录"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "未授权，请先登录"})
 			return
 		}
 		tokenStr = strings.TrimPrefix(tokenStr, "Bearer ")
-		claims, err := ParseToken(tokenStr)
+
+		claims, err := auth.ParseAccessToken(tokenStr)
 		if err != nil {
-			c.AbortWithStatusJSON(401, gin.H{"code": 401, "msg": "Token 无效或已过期"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "Token 无效或已过期"})
 			return
 		}
+
+		ctx := c.Request.Context()
+		if blacklist != nil {
+			revoked, _ := blacklist.IsBlacklisted(ctx, claims.JTI)
+			if revoked {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "Token 已被吊销"})
+				return
+			}
+			userRevoked, _ := blacklist.IsUserRevoked(ctx, claims.UserID, claims.IssuedAt.Time)
+			if userRevoked {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 401, "msg": "账号凭证已失效，请重新登录"})
+				return
+			}
+		}
+
 		c.Set("userId", claims.UserID)
 		c.Set("username", claims.Username)
 		c.Set("tenantId", claims.TenantID)
 		c.Next()
 	}
+}
+
+// RevokeToken 吊销 Token（登出时调用）
+func RevokeToken(ctx context.Context, jti string) error {
+	if blacklist == nil {
+		return errcode.Err(errcode.TokenInvalid)
+	}
+	ttl := time.Duration(config.C.JWT.AccessExpire) * time.Second
+	return blacklist.AddJTI(ctx, jti, ttl)
+}
+
+// RevokeUserTokens 吊销用户所有 Token（改密/禁用时调用）
+func RevokeUserTokens(ctx context.Context, userID int64) error {
+	if blacklist == nil {
+		return nil
+	}
+	return blacklist.RevokeByUser(ctx, userID)
 }
 
 // GetUserID 从上下文获取当前用户 ID

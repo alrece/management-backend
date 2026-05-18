@@ -18,6 +18,7 @@ type UserService interface {
 	Update(ctx context.Context, req *smodel.UserUpdateReq, updater int64) error
 	Delete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*smodel.UserResp, error)
+	GetByUsername(ctx context.Context, username string) (*smodel.User, error)
 	Page(ctx context.Context, req *smodel.UserPageReq, tenantScope func(*gorm.DB) *gorm.DB) ([]smodel.UserResp, int64, error)
 }
 
@@ -86,6 +87,10 @@ func (s *userService) Delete(ctx context.Context, id int64) error {
 		return errcode.Err(errcode.UserNotFound)
 	}
 	return s.repo.Delete(ctx, id)
+}
+
+func (s *userService) GetByUsername(ctx context.Context, username string) (*smodel.User, error) {
+	return s.repo.GetByUsername(ctx, username)
 }
 
 func (s *userService) GetByID(ctx context.Context, id int64) (*smodel.UserResp, error) {
