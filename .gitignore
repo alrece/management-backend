@@ -1,0 +1,30 @@
+# Binaries
+bin/
+tmp/
+*.exe
+
+# Test
+*.test
+coverage.txt
+
+# IDE
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config
+configs/config.local.yaml
+
+# Logs
+logs/
+*.log
+
+# Air
+tmp/
+
+# Java 参考项目构建产物
+ruoyi-vue-pro/target/
+ruoyi-vue-plus-ai-engineering/target/

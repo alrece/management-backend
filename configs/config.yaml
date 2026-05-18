@@ -1,0 +1,66 @@
+server:
+  port: 8081
+  mode: debug
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: mb_user
+  password: ""
+  database: management_backend
+  charset: utf8mb4
+  max-idle-conns: 10
+  max-open-conns: 100
+  log-level: warn
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: ""
+  access-expire: 1800
+  refresh-expire: 604800
+  issuer: management-backend
+
+log:
+  level: info
+  format: json
+  output: stdout
+  file:
+    enable: false
+    max-size: 100
+    max-backups: 30
+    max-age: 7
+
+snowflake:
+  node: 1
+
+tenant:
+  enable: true
+  ignore-tables:
+    - sys_menu
+    - sys_tenant
+    - sys_role_menu
+
+cors:
+  allowed-origins:
+    - "http://localhost:5173"
+    - "http://localhost:3000"
+
+oss:
+  type: minio
+  minio:
+    endpoint: 127.0.0.1:9000
+    access-key: ""
+    secret-key: ""
+    bucket: management
+    use-ssl: false
+
+login-security:
+  max-fail-count: 5
+  rate-limit-per-ip: 20
+  rate-limit-per-acct: 5
+  password-min-len: 8
