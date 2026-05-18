@@ -1,0 +1,117 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mb-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MB_MYSQL_PASSWORD}
+      MYSQL_DATABASE: management
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - backend
+
+  redis:
+    image: redis:7-alpine
+    container_name: mb-redis
+    volumes:
+      - redis_data:/data
+    networks:
+      - backend
+
+  minio:
+    image: minio/minio:latest
+    container_name: mb-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_PASSWORD}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - backend
+
+  consul:
+    image: hashicorp/consul:1.15
+    container_name: mb-consul
+    command: agent -dev -client=0.0.0.0
+    networks:
+      - backend
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: mb-jaeger
+    networks:
+      - backend
+
+  traefik:
+    image: traefik:v2.10
+    container_name: mb-traefik
+    command:
+      - "--api.dashboard=true"
+      - "--providers.consulcatalog=true"
+      - "--providers.consulcatalog.endpoint=consul:8500"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - ./configs/traefik:/etc/traefik
+    networks:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mb-prometheus
+    volumes:
+      - ./configs/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - backend
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mb-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - backend
+
+  loki:
+    image: grafana/loki:latest
+    container_name: mb-loki
+    volumes:
+      - ./configs/loki:/etc/loki
+      - loki_data:/loki
+    networks:
+      - backend
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: mb-promtail
+    volumes:
+      - ./configs/promtail:/etc/promtail
+      - /var/log/app:/var/log/app
+    command: -config.file=/etc/promtail/promtail-config.yaml
+    networks:
+      - backend
+
+volumes:
+  mysql_data:
+  redis_data:
+  minio_data:
+  prometheus_data:
+  grafana_data:
+  loki_data:
+
+networks:
+  backend:
+    driver: bridge

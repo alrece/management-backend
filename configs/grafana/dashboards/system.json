@@ -1,0 +1,19 @@
+{
+  "dashboard": {
+    "title": "Management Backend System",
+    "tags": ["management", "backend"],
+    "timezone": "browser",
+    "panels": [
+      {"title": "HTTP 请求速率", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0}, "targets": [{"expr": "rate(http_requests_total[5m])", "legendFormat": "{{method}} {{path}} {{status}}"}]},
+      {"title": "HTTP P99 延迟", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0}, "targets": [{"expr": "histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m]))", "legendFormat": "p99"}]},
+      {"title": "MySQL 连接数", "type": "gauge", "gridPos": {"h": 8, "w": 6, "x": 0, "y": 8}, "targets": [{"expr": "mysql_connections", "legendFormat": "{{state}}"}]},
+      {"title": "MySQL 查询 P95", "type": "timeseries", "gridPos": {"h": 8, "w": 6, "x": 6, "y": 8}, "targets": [{"expr": "histogram_quantile(0.95, rate(mysql_query_duration_seconds_bucket[5m]))", "legendFormat": "{{operation}}"}]},
+      {"title": "Redis 命令速率", "type": "timeseries", "gridPos": {"h": 8, "w": 6, "x": 12, "y": 8}, "targets": [{"expr": "rate(redis_commands_total[5m])", "legendFormat": "{{command}}"}]},
+      {"title": "租户连接池", "type": "stat", "gridPos": {"h": 8, "w": 6, "x": 18, "y": 8}, "targets": [{"expr": "tenant_pool_tenants", "legendFormat": "tenants"}, {"expr": "tenant_pool_connections", "legendFormat": "connections"}]},
+      {"title": "Goroutines", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16}, "targets": [{"expr": "go_goroutines", "legendFormat": "goroutines"}]},
+      {"title": "内存使用", "type": "timeseries", "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16}, "targets": [{"expr": "go_memstats_alloc_bytes", "legendFormat": "alloc"}, {"expr": "go_memstats_sys_bytes", "legendFormat": "sys"}]}
+    ],
+    "refresh": "10s"
+  },
+  "overwrite": true
+}
