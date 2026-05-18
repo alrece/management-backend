@@ -1,53 +1,11 @@
 -- ==========================================
--- management-backend 数据库初始化
--- 综合两个 Java 项目的核心表设计
+-- 租户独立库模板 Schema
+-- 新建租户时复制此模板到租户独立数据库
 -- ==========================================
 
-CREATE DATABASE IF NOT EXISTS `management_backend`
-  DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE `management_backend`;
-
--- 租户表（默认库，不受租户过滤）
-CREATE TABLE `sys_tenant` (
-    `id`              BIGINT       NOT NULL COMMENT '租户ID',
-    `tenant_name`     VARCHAR(100) NOT NULL COMMENT '租户名称',
-    `contact_name`    VARCHAR(30)  DEFAULT '' COMMENT '联系人',
-    `contact_mobile`  VARCHAR(20)  DEFAULT '' COMMENT '联系电话',
-    `db_name`         VARCHAR(100) DEFAULT '' COMMENT '租户数据库名',
-    `status`          TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
-    `expire_time`     DATETIME     DEFAULT NULL COMMENT '过期时间',
-    `init_status`     TINYINT      NOT NULL DEFAULT 0 COMMENT '初始化状态(0待初始化 1初始化中 2已就绪 3失败)',
-    `remark`          VARCHAR(500) DEFAULT '' COMMENT '备注',
-    `creator`         BIGINT       DEFAULT NULL,
-    `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updater`         BIGINT       DEFAULT NULL,
-    `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted`         BIT(1)       NOT NULL DEFAULT b'0',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB COMMENT='租户表';
-
--- 部门表
-CREATE TABLE `sys_dept` (
-    `id`          BIGINT       NOT NULL COMMENT '部门ID',
-    `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
-    `parent_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '父部门ID',
-    `ancestors`   VARCHAR(200) DEFAULT '' COMMENT '祖级列表',
-    `dept_name`   VARCHAR(50)  NOT NULL COMMENT '部门名称',
-    `sort`        INT          NOT NULL DEFAULT 0,
-    `leader`      VARCHAR(30)  DEFAULT '' COMMENT '负责人',
-    `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
-    `creator`     BIGINT       DEFAULT NULL,
-    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    `updater`     BIGINT       DEFAULT NULL,
-    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
-    PRIMARY KEY (`id`)
-) ENGINE=InnoDB COMMENT='部门表';
-
 -- 用户表
-CREATE TABLE `sys_user` (
+CREATE TABLE IF NOT EXISTS `sys_user` (
     `id`          BIGINT       NOT NULL COMMENT '用户ID',
-    `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
     `username`    VARCHAR(30)  NOT NULL COMMENT '用户名',
     `password`    VARCHAR(100) NOT NULL COMMENT '密码',
     `nickname`    VARCHAR(30)  DEFAULT '' COMMENT '昵称',
@@ -65,13 +23,12 @@ CREATE TABLE `sys_user` (
     `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_username` (`username`, `tenant_id`)
+    UNIQUE KEY `uk_username` (`username`)
 ) ENGINE=InnoDB COMMENT='用户表';
 
 -- 角色表
-CREATE TABLE `sys_role` (
+CREATE TABLE IF NOT EXISTS `sys_role` (
     `id`          BIGINT       NOT NULL COMMENT '角色ID',
-    `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
     `role_name`   VARCHAR(50)  NOT NULL COMMENT '角色名称',
     `role_code`   VARCHAR(50)  NOT NULL COMMENT '角色编码',
     `sort`        INT          NOT NULL DEFAULT 0,
@@ -86,27 +43,41 @@ CREATE TABLE `sys_role` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='角色表';
 
--- 菜单表（不受租户过滤）
-CREATE TABLE `sys_menu` (
-    `id`          BIGINT       NOT NULL COMMENT '菜单ID',
-    `parent_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '父菜单ID',
-    `menu_name`   VARCHAR(50)  NOT NULL COMMENT '菜单名称',
-    `menu_type`   TINYINT      NOT NULL COMMENT '类型(1目录 2菜单 3按钮)',
-    `path`        VARCHAR(200) DEFAULT '' COMMENT '路由路径',
-    `permission`  VARCHAR(100) DEFAULT '' COMMENT '权限标识',
-    `icon`        VARCHAR(50)  DEFAULT '',
+-- 部门表
+CREATE TABLE IF NOT EXISTS `sys_dept` (
+    `id`          BIGINT       NOT NULL COMMENT '部门ID',
+    `parent_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '父部门ID',
+    `ancestors`   VARCHAR(200) DEFAULT '' COMMENT '祖级列表',
+    `dept_name`   VARCHAR(50)  NOT NULL COMMENT '部门名称',
     `sort`        INT          NOT NULL DEFAULT 0,
-    `status`      TINYINT      NOT NULL DEFAULT 0,
+    `leader`      VARCHAR(30)  DEFAULT '' COMMENT '负责人',
+    `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
     `creator`     BIGINT       DEFAULT NULL,
     `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updater`     BIGINT       DEFAULT NULL,
     `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB COMMENT='菜单权限表';
+) ENGINE=InnoDB COMMENT='部门表';
+
+-- 岗位表
+CREATE TABLE IF NOT EXISTS `sys_post` (
+    `id`          BIGINT       NOT NULL COMMENT '岗位ID',
+    `post_code`   VARCHAR(50)  NOT NULL COMMENT '岗位编码',
+    `post_name`   VARCHAR(50)  NOT NULL COMMENT '岗位名称',
+    `sort`        INT          NOT NULL DEFAULT 0,
+    `status`      TINYINT      NOT NULL DEFAULT 0,
+    `remark`      VARCHAR(500) DEFAULT '',
+    `creator`     BIGINT       DEFAULT NULL,
+    `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updater`     BIGINT       DEFAULT NULL,
+    `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
+    PRIMARY KEY (`id`)
+) ENGINE=InnoDB COMMENT='岗位表';
 
 -- 用户角色关联
-CREATE TABLE `sys_user_role` (
+CREATE TABLE IF NOT EXISTS `sys_user_role` (
     `id`          BIGINT   NOT NULL,
     `user_id`     BIGINT   NOT NULL COMMENT '用户ID',
     `role_id`     BIGINT   NOT NULL COMMENT '角色ID',
@@ -118,23 +89,22 @@ CREATE TABLE `sys_user_role` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='用户角色关联表';
 
--- 角色菜单关联（不受租户过滤）
-CREATE TABLE `sys_role_menu` (
+-- 用户岗位关联
+CREATE TABLE IF NOT EXISTS `sys_user_post` (
     `id`          BIGINT   NOT NULL,
-    `role_id`     BIGINT   NOT NULL COMMENT '角色ID',
-    `menu_id`     BIGINT   NOT NULL COMMENT '菜单ID',
+    `user_id`     BIGINT   NOT NULL COMMENT '用户ID',
+    `post_id`     BIGINT   NOT NULL COMMENT '岗位ID',
     `creator`     BIGINT   DEFAULT NULL,
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updater`     BIGINT   DEFAULT NULL,
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     BIT(1)   NOT NULL DEFAULT b'0',
     PRIMARY KEY (`id`)
-) ENGINE=InnoDB COMMENT='角色菜单关联表';
+) ENGINE=InnoDB COMMENT='用户岗位关联表';
 
 -- 字典类型
-CREATE TABLE `sys_dict_type` (
+CREATE TABLE IF NOT EXISTS `sys_dict_type` (
     `id`          BIGINT       NOT NULL,
-    `tenant_id`   BIGINT       NOT NULL DEFAULT 0,
     `dict_name`   VARCHAR(100) NOT NULL COMMENT '字典名称',
     `dict_type`   VARCHAR(100) NOT NULL COMMENT '字典类型',
     `status`      TINYINT      NOT NULL DEFAULT 0,
@@ -145,13 +115,12 @@ CREATE TABLE `sys_dict_type` (
     `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uk_dict_type` (`dict_type`, `tenant_id`)
+    UNIQUE KEY `uk_dict_type` (`dict_type`)
 ) ENGINE=InnoDB COMMENT='字典类型表';
 
 -- 字典数据
-CREATE TABLE `sys_dict_data` (
+CREATE TABLE IF NOT EXISTS `sys_dict_data` (
     `id`          BIGINT       NOT NULL,
-    `tenant_id`   BIGINT       NOT NULL DEFAULT 0,
     `dict_type`   VARCHAR(100) NOT NULL COMMENT '字典类型',
     `label`       VARCHAR(100) NOT NULL COMMENT '字典标签',
     `value`       VARCHAR(100) NOT NULL COMMENT '字典值',
@@ -166,10 +135,15 @@ CREATE TABLE `sys_dict_data` (
     PRIMARY KEY (`id`)
 ) ENGINE=InnoDB COMMENT='字典数据表';
 
--- 初始数据
-INSERT INTO `sys_tenant` (`id`, `tenant_name`, `db_name`, `status`, `init_status`) VALUES (1, '默认租户', 'management_backend', 0, 2);
-INSERT INTO `sys_user` (`id`, `tenant_id`, `username`, `password`, `nickname`, `status`)
-  VALUES (1, 1, 'admin', '$2a$10$VQBl2noKFPH/MSOsOq7a2.tdJqIckGw8MKTqPYxGqv3Rp7.q5mFJO', '超级管理员', 0);
-INSERT INTO `sys_role` (`id`, `tenant_id`, `role_name`, `role_code`, `data_scope`, `status`)
-  VALUES (1, 1, '超级管理员', 'super_admin', 1, 0);
+-- 初始化默认管理员（密码: admin123）
+INSERT INTO `sys_user` (`id`, `username`, `password`, `nickname`, `status`)
+  VALUES (1, 'admin', '$2a$10$VQBl2noKFPH/MSOsOq7a2.tdJqIckGw8MKTqPYxGqv3Rp7.q5mFJO', '超级管理员', 0);
+
+INSERT INTO `sys_role` (`id`, `role_name`, `role_code`, `data_scope`, `status`)
+  VALUES (1, '超级管理员', 'super_admin', 1, 0);
+
 INSERT INTO `sys_user_role` (`id`, `user_id`, `role_id`) VALUES (1, 1, 1);
+
+INSERT INTO `sys_dept` (`id`, `dept_name`, `sort`, `status`) VALUES (1, '总公司', 0, 0);
+
+INSERT INTO `sys_post` (`id`, `post_code`, `post_name`, `sort`, `status`) VALUES (1, 'ceo', '董事长', 0, 0);

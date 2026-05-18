@@ -19,12 +19,16 @@ import (
 func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logger) {
 	// 初始化认证组件
 	middleware.InitAuth(rdb)
+	middleware.InitTenant()
 	loginLock := auth.NewLoginLock(rdb)
 
 	// 依赖注入
 	userRepo := repository.NewUserRepo(db)
+	tenantRepo := repository.NewTenantRepo(db)
 	userSvc := service.NewUserService(userRepo)
+	tenantSvc := service.NewTenantService(tenantRepo)
 	userHandler := handler.NewUserHandler(userSvc)
+	tenantHandler := handler.NewTenantHandler(tenantSvc)
 	authHandler := handler.NewAuthHandler(userSvc, loginLock, logger)
 
 	// 全局中间件
@@ -48,6 +52,6 @@ func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logge
 	authed.Use(middleware.Tenant())
 	{
 		authed.POST("/auth/logout", authHandler.Logout)
-		system.RegisterRoutes(authed, userHandler)
+		system.RegisterRoutes(authed, userHandler, tenantHandler)
 	}
 }

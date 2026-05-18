@@ -44,6 +44,10 @@ tenant:
     - sys_menu
     - sys_tenant
     - sys_role_menu
+  max-pool-size: 50
+  idle-timeout: 30
+  max-conns-per-tenant: 10
+  db-name-prefix: "mb_tenant_"
 
 cors:
   allowed-origins:

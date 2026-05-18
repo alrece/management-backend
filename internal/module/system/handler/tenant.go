@@ -11,25 +11,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// UserHandler 用户接口处理器
-type UserHandler struct {
-	svc service.UserService
+// TenantHandler 租户接口处理器
+type TenantHandler struct {
+	svc service.TenantService
 }
 
-// NewUserHandler 构造函数
-func NewUserHandler(svc service.UserService) *UserHandler {
-	return &UserHandler{svc: svc}
+// NewTenantHandler 构造函数
+func NewTenantHandler(svc service.TenantService) *TenantHandler {
+	return &TenantHandler{svc: svc}
 }
 
-// Create 创建用户 POST /system/user
-func (h *UserHandler) Create(c *gin.Context) {
-	var req smodel.UserCreateReq
+// Create 创建租户 POST /api/system/tenant
+func (h *TenantHandler) Create(c *gin.Context) {
+	var req smodel.TenantCreateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数校验失败: "+err.Error())
 		return
 	}
-	id, err := h.svc.Create(c.Request.Context(), &req,
-		middleware.GetUserID(c), middleware.GetTenantID(c))
+	id, err := h.svc.Create(c.Request.Context(), &req, middleware.GetUserID(c))
 	if err != nil {
 		response.Fail(c, 500, err.Error())
 		return
@@ -37,9 +36,9 @@ func (h *UserHandler) Create(c *gin.Context) {
 	response.Ok(c, id)
 }
 
-// Update 更新用户 PUT /system/user
-func (h *UserHandler) Update(c *gin.Context) {
-	var req smodel.UserUpdateReq
+// Update 更新租户 PUT /api/system/tenant
+func (h *TenantHandler) Update(c *gin.Context) {
+	var req smodel.TenantUpdateReq
 	if err := c.ShouldBindJSON(&req); err != nil {
 		response.Fail(c, 400, "参数校验失败: "+err.Error())
 		return
@@ -51,8 +50,8 @@ func (h *UserHandler) Update(c *gin.Context) {
 	response.OkMsg(c, "更新成功")
 }
 
-// Delete 删除用户 DELETE /system/user/:id
-func (h *UserHandler) Delete(c *gin.Context) {
+// Delete 删除租户 DELETE /api/system/tenant/:id
+func (h *TenantHandler) Delete(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		response.Fail(c, 400, "无效的ID")
@@ -65,8 +64,8 @@ func (h *UserHandler) Delete(c *gin.Context) {
 	response.OkMsg(c, "删除成功")
 }
 
-// Get 获取用户详情 GET /system/user/:id
-func (h *UserHandler) Get(c *gin.Context) {
+// Get 获取租户详情 GET /api/system/tenant/:id
+func (h *TenantHandler) Get(c *gin.Context) {
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)
 	if err != nil {
 		response.Fail(c, 400, "无效的ID")
@@ -80,9 +79,9 @@ func (h *UserHandler) Get(c *gin.Context) {
 	response.Ok(c, data)
 }
 
-// Page 分页查询 GET /system/user/page
-func (h *UserHandler) Page(c *gin.Context) {
-	var req smodel.UserPageReq
+// Page 分页查询 GET /api/system/tenant/page
+func (h *TenantHandler) Page(c *gin.Context) {
+	var req smodel.TenantPageReq
 	if err := c.ShouldBindQuery(&req); err != nil {
 		response.Fail(c, 400, "参数校验失败: "+err.Error())
 		return

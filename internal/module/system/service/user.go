@@ -9,7 +9,6 @@ import (
 	"management-backend/pkg/snowflake"
 
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/gorm"
 )
 
 // UserService 用户业务接口
@@ -19,7 +18,7 @@ type UserService interface {
 	Delete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*smodel.UserResp, error)
 	GetByUsername(ctx context.Context, username string) (*smodel.User, error)
-	Page(ctx context.Context, req *smodel.UserPageReq, tenantScope func(*gorm.DB) *gorm.DB) ([]smodel.UserResp, int64, error)
+	Page(ctx context.Context, req *smodel.UserPageReq) ([]smodel.UserResp, int64, error)
 }
 
 type userService struct {
@@ -101,8 +100,8 @@ func (s *userService) GetByID(ctx context.Context, id int64) (*smodel.UserResp, 
 	return toResp(user), nil
 }
 
-func (s *userService) Page(ctx context.Context, req *smodel.UserPageReq, tenantScope func(*gorm.DB) *gorm.DB) ([]smodel.UserResp, int64, error) {
-	list, total, err := s.repo.Page(ctx, req, tenantScope)
+func (s *userService) Page(ctx context.Context, req *smodel.UserPageReq) ([]smodel.UserResp, int64, error) {
+	list, total, err := s.repo.Page(ctx, req)
 	if err != nil {
 		return nil, 0, err
 	}

@@ -1,6 +1,10 @@
 package middleware
 
-import "context"
+import (
+	"context"
+
+	"gorm.io/gorm"
+)
 
 type contextKey string
 
@@ -9,6 +13,7 @@ const (
 	keyUsername  contextKey = "username"
 	keyTenantID  contextKey = "tenant_id"
 	keyRequestID contextKey = "request_id"
+	keyTenantDB  contextKey = "tenant_db"
 )
 
 func WithUserID(ctx context.Context, id int64) context.Context {
@@ -53,4 +58,17 @@ func GetRequestID(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+// WithTenantDB 注入租户数据库连接到 context
+func WithTenantDB(ctx context.Context, db *gorm.DB) context.Context {
+	return context.WithValue(ctx, keyTenantDB, db)
+}
+
+// GetTenantDB 从 context 获取租户数据库连接
+func GetTenantDB(ctx context.Context) *gorm.DB {
+	if v, ok := ctx.Value(keyTenantDB).(*gorm.DB); ok {
+		return v
+	}
+	return nil
 }

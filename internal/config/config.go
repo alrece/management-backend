@@ -83,8 +83,12 @@ type SnowflakeConfig struct {
 }
 
 type TenantConfig struct {
-	Enable       bool     `mapstructure:"enable"`
-	IgnoreTables []string `mapstructure:"ignore-tables"`
+	Enable            bool     `mapstructure:"enable"`
+	IgnoreTables      []string `mapstructure:"ignore-tables"`
+	MaxPoolSize       int      `mapstructure:"max-pool-size"`
+	IdleTimeout       int      `mapstructure:"idle-timeout"`
+	MaxConnsPerTenant int      `mapstructure:"max-conns-per-tenant"`
+	DBNamePrefix      string   `mapstructure:"db-name-prefix"`
 }
 
 func (t TenantConfig) IsIgnoreTable(table string) bool {
