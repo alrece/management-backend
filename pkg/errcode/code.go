@@ -25,6 +25,14 @@ const (
 	RoleExists       = 1011
 	MenuNotFound     = 1012
 	DeptNotFound     = 1013
+		PostNotFound     = 1014
+		PostExists       = 1015
+		MenuHasChildren  = 1020
+		MenuHasRoleRef   = 1021
+		DeptHasChildren  = 1022
+		DeptHasUsers     = 1023
+		RoleHasUsers     = 1024
+		PermissionDenied = 1401
 
 	// 基础设施 2000-2999
 	DictNotFound    = 2001
@@ -59,7 +67,20 @@ var messages = map[int]string{
 	LoginLocked:     "账号已被锁定",
 	LoginFailLimit:  "登录失败次数超限",
 
-	TenantNotFound: "租户不存在",
+	RoleNotFound:     "角色不存在",
+		RoleExists:       "角色编码已存在",
+		MenuNotFound:     "菜单不存在",
+		DeptNotFound:     "部门不存在",
+		PostNotFound:     "岗位不存在",
+		PostExists:       "岗位编码已存在",
+		MenuHasChildren:  "存在子菜单，无法删除",
+		MenuHasRoleRef:   "菜单已分配给角色，无法删除",
+		DeptHasChildren:  "存在子部门，无法删除",
+		DeptHasUsers:     "部门下存在用户，无法删除",
+		RoleHasUsers:     "角色下存在用户，无法删除",
+		PermissionDenied: "权限不足",
+		
+		TenantNotFound: "租户不存在",
 	TenantDisabled: "租户已被禁用",
 	TenantExpired:  "租户已过期",
 }

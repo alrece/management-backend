@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package job;
+
+option go_package = "management-backend/api/proto/job";
+
+service JobService {
+  // 触发任务执行
+  rpc TriggerJob(TriggerJobRequest) returns (TriggerJobResponse);
+  // 查询任务状态
+  rpc GetJobStatus(GetJobStatusRequest) returns (GetJobStatusResponse);
+}
+
+message TriggerJobRequest {
+  int64 task_id = 1;
+  int64 tenant_id = 2;
+}
+
+message TriggerJobResponse {
+  int64 execution_id = 1;
+}
+
+message GetJobStatusRequest {
+  int64 task_id = 1;
+}
+
+message GetJobStatusResponse {
+  int64 task_id = 1;
+  string name = 2;
+  int32 status = 3;
+  string cron_expr = 4;
+}

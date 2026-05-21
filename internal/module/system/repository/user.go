@@ -17,6 +17,7 @@ type UserRepo interface {
 	Delete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*smodel.User, error)
 	GetByUsername(ctx context.Context, username string) (*smodel.User, error)
+	UpdatePassword(ctx context.Context, user *smodel.User) error
 	Page(ctx context.Context, req *smodel.UserPageReq) ([]smodel.User, int64, error)
 }
 
@@ -63,6 +64,10 @@ func (r *userRepo) GetByUsername(ctx context.Context, username string) (*smodel.
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (r *userRepo) UpdatePassword(ctx context.Context, user *smodel.User) error {
+	return r.getDB(ctx).WithContext(ctx).Model(user).Update("password", user.Password).Error
 }
 
 func (r *userRepo) Page(ctx context.Context, req *smodel.UserPageReq) ([]smodel.User, int64, error) {

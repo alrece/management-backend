@@ -1,6 +1,8 @@
-go 1.22
+go 1.26
 
 use (
-    .
-    pkg
+	.
+	pkg
+	services/job-service
+	services/workflow-service
 )

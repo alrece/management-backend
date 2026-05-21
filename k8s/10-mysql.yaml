@@ -1,0 +1,316 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-init
+  namespace: mb
+data:
+  init.sql: |
+    -- ==========================================
+    -- management-backend 数据库初始化
+    -- ==========================================
+    CREATE DATABASE IF NOT EXISTS `management_backend`
+      DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+    USE `management_backend`;
+
+    -- 租户表
+    CREATE TABLE IF NOT EXISTS `sys_tenant` (
+        `id`              BIGINT       NOT NULL COMMENT '租户ID',
+        `tenant_name`     VARCHAR(100) NOT NULL COMMENT '租户名称',
+        `contact_name`    VARCHAR(30)  DEFAULT '' COMMENT '联系人',
+        `contact_mobile`  VARCHAR(20)  DEFAULT '' COMMENT '联系电话',
+        `db_name`         VARCHAR(100) DEFAULT '' COMMENT '租户数据库名',
+        `status`          TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `expire_time`     DATETIME     DEFAULT NULL COMMENT '过期时间',
+        `init_status`     TINYINT      NOT NULL DEFAULT 0 COMMENT '初始化状态(0待初始化 1初始化中 2已就绪 3失败)',
+        `remark`          VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`         BIGINT       DEFAULT NULL,
+        `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`         BIGINT       DEFAULT NULL,
+        `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`         BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='租户表';
+
+    -- 部门表
+    CREATE TABLE IF NOT EXISTS `sys_dept` (
+        `id`              BIGINT       NOT NULL COMMENT '部门ID',
+        `tenant_id`       BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `parent_id`       BIGINT       NOT NULL DEFAULT 0 COMMENT '父部门ID',
+        `name`            VARCHAR(50)  NOT NULL COMMENT '部门名称',
+        `sort`            INT          NOT NULL DEFAULT 0 COMMENT '显示顺序',
+        `leader_user_id`  BIGINT       DEFAULT NULL COMMENT '负责人用户ID',
+        `status`          TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `remark`          VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`         BIGINT       DEFAULT NULL,
+        `create_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`         BIGINT       DEFAULT NULL,
+        `update_time`     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`         BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='部门表';
+
+    -- 岗位表
+    CREATE TABLE IF NOT EXISTS `sys_post` (
+        `id`          BIGINT       NOT NULL COMMENT '岗位ID',
+        `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `post_code`   VARCHAR(64)  NOT NULL COMMENT '岗位编码',
+        `post_name`   VARCHAR(100) NOT NULL COMMENT '岗位名称',
+        `sort`        INT          NOT NULL DEFAULT 0 COMMENT '显示顺序',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `remark`      VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`     BIGINT       DEFAULT NULL,
+        `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT       DEFAULT NULL,
+        `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='岗位表';
+
+    -- 用户表
+    CREATE TABLE IF NOT EXISTS `sys_user` (
+        `id`          BIGINT       NOT NULL COMMENT '用户ID',
+        `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `username`    VARCHAR(64)  NOT NULL COMMENT '用户名',
+        `password`    VARCHAR(128) NOT NULL COMMENT '密码',
+        `nickname`    VARCHAR(50)  NOT NULL DEFAULT '' COMMENT '昵称',
+        `email`       VARCHAR(128) DEFAULT '' COMMENT '邮箱',
+        `mobile`      VARCHAR(20)  DEFAULT '' COMMENT '手机号',
+        `sex`         TINYINT      NOT NULL DEFAULT 0 COMMENT '性别(0未知 1男 2女)',
+        `avatar`      VARCHAR(512) DEFAULT '' COMMENT '头像',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `dept_id`     BIGINT       DEFAULT NULL COMMENT '部门ID',
+        `remark`      VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`     BIGINT       DEFAULT NULL,
+        `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT       DEFAULT NULL,
+        `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`),
+        UNIQUE KEY `uk_username` (`username`, `tenant_id`)
+    ) ENGINE=InnoDB COMMENT='用户表';
+
+    -- 角色表
+    CREATE TABLE IF NOT EXISTS `sys_role` (
+        `id`          BIGINT       NOT NULL COMMENT '角色ID',
+        `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `name`        VARCHAR(100) NOT NULL COMMENT '角色名称',
+        `code`        VARCHAR(64)  NOT NULL COMMENT '角色标识',
+        `sort`        INT          NOT NULL DEFAULT 0 COMMENT '显示顺序',
+        `data_scope`  TINYINT      NOT NULL DEFAULT 1 COMMENT '数据权限范围(1全部 2自定义 3本部门 4本部门及以下 5仅本人)',
+        `data_scope_dept_ids` TEXT DEFAULT '' COMMENT '数据权限部门ID(自定义时使用,逗号分隔)',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `remark`      VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`     BIGINT       DEFAULT NULL,
+        `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT       DEFAULT NULL,
+        `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='角色表';
+
+    -- 菜单表
+    CREATE TABLE IF NOT EXISTS `sys_menu` (
+        `id`          BIGINT       NOT NULL COMMENT '菜单ID',
+        `parent_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '父菜单ID',
+        `menu_name`   VARCHAR(100) NOT NULL COMMENT '菜单名称',
+        `menu_type`   TINYINT      NOT NULL COMMENT '类型(1目录 2菜单 3按钮)',
+        `path`        VARCHAR(256) DEFAULT '' COMMENT '路由路径',
+        `component`   VARCHAR(256) DEFAULT '' COMMENT '组件路径',
+        `permission`  VARCHAR(128) DEFAULT '' COMMENT '权限标识',
+        `icon`        VARCHAR(128) DEFAULT '' COMMENT '图标',
+        `sort`        INT          NOT NULL DEFAULT 0 COMMENT '显示顺序',
+        `visible`     TINYINT      NOT NULL DEFAULT 0 COMMENT '是否可见(0可见 1隐藏)',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '状态(0正常 1停用)',
+        `remark`      VARCHAR(500) DEFAULT '' COMMENT '备注',
+        `creator`     BIGINT       DEFAULT NULL,
+        `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT       DEFAULT NULL,
+        `update_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)       NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='菜单表';
+
+    -- 角色菜单关联表
+    CREATE TABLE IF NOT EXISTS `sys_role_menu` (
+        `id`          BIGINT    NOT NULL AUTO_INCREMENT COMMENT '主键',
+        `role_id`     BIGINT    NOT NULL COMMENT '角色ID',
+        `menu_id`     BIGINT    NOT NULL COMMENT '菜单ID',
+        `tenant_id`   BIGINT    NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `creator`     BIGINT    DEFAULT NULL,
+        `create_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT    DEFAULT NULL,
+        `update_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)    NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='角色菜单关联表';
+
+    -- 用户角色关联表
+    CREATE TABLE IF NOT EXISTS `sys_user_role` (
+        `id`          BIGINT    NOT NULL AUTO_INCREMENT COMMENT '主键',
+        `user_id`     BIGINT    NOT NULL COMMENT '用户ID',
+        `role_id`     BIGINT    NOT NULL COMMENT '角色ID',
+        `tenant_id`   BIGINT    NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `creator`     BIGINT    DEFAULT NULL,
+        `create_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        `updater`     BIGINT    DEFAULT NULL,
+        `update_time` DATETIME  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        `deleted`     BIT(1)    NOT NULL DEFAULT b'0',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='用户角色关联表';
+
+    -- 操作日志表
+    CREATE TABLE IF NOT EXISTS `sys_operate_log` (
+        `id`          BIGINT       NOT NULL COMMENT '日志ID',
+        `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `user_id`     BIGINT       DEFAULT NULL COMMENT '操作人ID',
+        `username`    VARCHAR(64)  DEFAULT '' COMMENT '操作人用户名',
+        `module`      VARCHAR(64)  DEFAULT '' COMMENT '操作模块',
+        `action`      VARCHAR(128) DEFAULT '' COMMENT '操作动作',
+        `method`      VARCHAR(256) DEFAULT '' COMMENT '请求方法',
+        `url`         VARCHAR(512) DEFAULT '' COMMENT '请求URL',
+        `ip`          VARCHAR(64)  DEFAULT '' COMMENT '请求IP',
+        `request`     TEXT         COMMENT '请求参数',
+        `response`    TEXT         COMMENT '响应结果',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '操作状态(0成功 1失败)',
+        `duration`    INT          DEFAULT 0 COMMENT '耗时(ms)',
+        `error_msg`   TEXT         COMMENT '错误信息',
+        `create_time` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='操作日志表';
+
+    -- 登录日志表
+    CREATE TABLE IF NOT EXISTS `sys_login_log` (
+        `id`          BIGINT       NOT NULL COMMENT '日志ID',
+        `tenant_id`   BIGINT       NOT NULL DEFAULT 0 COMMENT '租户编号',
+        `username`    VARCHAR(64)  DEFAULT '' COMMENT '登录用户名',
+        `ip`          VARCHAR(64)  DEFAULT '' COMMENT '登录IP',
+        `user_agent`  VARCHAR(512) DEFAULT '' COMMENT '浏览器UA',
+        `status`      TINYINT      NOT NULL DEFAULT 0 COMMENT '登录状态(0成功 1失败)',
+        `msg`         VARCHAR(256) DEFAULT '' COMMENT '提示消息',
+        `login_time`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+        PRIMARY KEY (`id`)
+    ) ENGINE=InnoDB COMMENT='登录日志表';
+
+    -- ========== 初始数据 ==========
+    -- 默认租户
+    INSERT IGNORE INTO `sys_tenant` (`id`, `tenant_name`, `contact_name`, `db_name`, `status`, `init_status`)
+    VALUES (1, '默认租户', '管理员', 'management_backend', 0, 2);
+
+    -- 默认部门
+    INSERT IGNORE INTO `sys_dept` (`id`, `tenant_id`, `parent_id`, `name`, `sort`, `status`) VALUES
+    (100, 1, 0, '总公司', 0, 0),
+    (101, 1, 100, '技术部', 1, 0),
+    (102, 1, 100, '市场部', 2, 0);
+
+    -- 默认岗位
+    INSERT IGNORE INTO `sys_post` (`id`, `tenant_id`, `post_code`, `post_name`, `sort`, `status`) VALUES
+    (1, 1, 'ceo', '董事长', 1, 0),
+    (2, 1, 'se', '架构师', 2, 0),
+    (3, 1, 'dev', '开发工程师', 3, 0);
+
+    -- 默认管理员（密码: admin123，bcrypt hash）
+    INSERT IGNORE INTO `sys_user` (`id`, `tenant_id`, `username`, `password`, `nickname`, `status`, `dept_id`, `remark`)
+    VALUES (1, 1, 'admin', '$2a$10$mRMIYLDtRHlf6.9ipiqH1.Z.bh/R9dO9dI8GAiS1AXGYsTlpSqL2S', '管理员', 0, 100, '超级管理员');
+
+    -- 默认角色
+    INSERT IGNORE INTO `sys_role` (`id`, `tenant_id`, `name`, `code`, `sort`, `data_scope`, `status`, `remark`) VALUES
+    (1, 1, '超级管理员', 'super_admin', 1, 1, 0, '超级管理员'),
+    (2, 1, '普通角色', 'common', 2, 2, 0, '');
+
+    -- 用户角色
+    INSERT IGNORE INTO `sys_user_role` (`user_id`, `role_id`, `tenant_id`) VALUES (1, 1, 1);
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mysql-secret
+  namespace: mb
+type: Opaque
+stringData:
+  MYSQL_ROOT_PASSWORD: "mb_root_2026"
+  MYSQL_USER: "mb_user"
+  MYSQL_PASSWORD: "mb_pass_2026"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  namespace: mb
+  labels:
+    app: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql
+  template:
+    metadata:
+      labels:
+        app: mysql
+    spec:
+      containers:
+        - name: mysql
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_USER
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_PASSWORD
+            - name: MYSQL_DATABASE
+              value: "management_backend"
+          volumeMounts:
+            - name: mysql-data
+              mountPath: /var/lib/mysql
+            - name: init-sql
+              mountPath: /docker-entrypoint-initdb.d
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          readinessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-pmb_root_2026"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-pmb_root_2026"]
+            initialDelaySeconds: 60
+            periodSeconds: 15
+      volumes:
+        - name: mysql-data
+          emptyDir: {}
+        - name: init-sql
+          configMap:
+            name: mysql-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  namespace: mb
+spec:
+  selector:
+    app: mysql
+  ports:
+    - port: 3306
+      targetPort: 3306
+  clusterIP: None

@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package system;
+
+option go_package = "management-backend/api/proto/system";
+
+service UserService {
+  rpc GetUser(GetUserReq) returns (UserResp);
+  rpc ListUsers(ListUsersReq) returns (UserListResp);
+  rpc CreateUser(CreateUserReq) returns (UserIDResp);
+  rpc UpdateUser(UpdateUserReq) returns (Empty);
+  rpc DeleteUser(IDReq) returns (Empty);
+}
+
+message GetUserReq { int64 id = 1; }
+message IDReq { int64 id = 1; }
+message Empty {}
+
+message CreateUserReq {
+  string username = 1;
+  string password = 2;
+  string nickname = 3;
+  string email = 4;
+  string mobile = 5;
+  int32 sex = 6;
+  int64 dept_id = 7;
+  int32 status = 8;
+  string remark = 9;
+}
+
+message UpdateUserReq {
+  int64 id = 1;
+  string nickname = 2;
+  string email = 3;
+  string mobile = 4;
+  int32 sex = 5;
+  int64 dept_id = 6;
+  int32 status = 7;
+  string remark = 8;
+}
+
+message ListUsersReq {
+  int32 page = 1;
+  int32 page_size = 2;
+  string username = 3;
+  int32 status = 4;
+}
+
+message UserResp {
+  int64 id = 1;
+  string username = 2;
+  string nickname = 3;
+  string email = 4;
+  string mobile = 5;
+  int32 sex = 6;
+  int32 status = 7;
+  int64 dept_id = 8;
+  string create_time = 9;
+}
+
+message UserListResp {
+  repeated UserResp list = 1;
+  int64 total = 2;
+}
+
+message UserIDResp { int64 id = 1; }

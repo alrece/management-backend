@@ -25,6 +25,25 @@ logs/
 # Air
 tmp/
 
-# Java 参考项目构建产物
-ruoyi-vue-pro/target/
-ruoyi-vue-plus-ai-engineering/target/
+# Node
+node_modules/
+.pnpm-store/
+
+# Java 参考项目
+ruoyi-vue-pro/
+ruoyi-vue-plus-ai-engineering/
+yudao-cloud/
+yudao-ui-admin-vben/
+
+# IDE / Tool
+.idea/
+.vscode/
+.claude/
+.playwright-mcp/
+*.swp
+
+# Screenshots
+*.png
+
+# OpenSpec runtime
+openspec/.state/

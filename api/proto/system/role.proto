@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package system;
+
+option go_package = "management-backend/api/proto/system";
+
+service RoleService {
+  rpc GetRole(IDReq) returns (RoleResp);
+  rpc ListRoles(ListRolesReq) returns (RoleListResp);
+  rpc CreateRole(CreateRoleReq) returns (IDResp);
+  rpc UpdateRole(UpdateRoleReq) returns (Empty);
+  rpc DeleteRole(IDReq) returns (Empty);
+}
+
+message ListRolesReq {
+  int32 page = 1;
+  int32 page_size = 2;
+  string role_name = 3;
+  string role_code = 4;
+}
+
+message CreateRoleReq {
+  string role_name = 1;
+  string role_code = 2;
+  int32 data_scope = 3;
+  int32 sort = 4;
+  int32 status = 5;
+  string remark = 6;
+}
+
+message UpdateRoleReq {
+  int64 id = 1;
+  string role_name = 2;
+  string role_code = 3;
+  int32 data_scope = 4;
+  repeated int64 data_scope_dept_ids = 5;
+  int32 sort = 6;
+  int32 status = 7;
+  string remark = 8;
+}
+
+message RoleResp {
+  int64 id = 1;
+  string role_name = 2;
+  string role_code = 3;
+  int32 data_scope = 4;
+  int32 sort = 5;
+  int32 status = 6;
+  string create_time = 7;
+}
+
+message RoleListResp {
+  repeated RoleResp list = 1;
+  int64 total = 2;
+}

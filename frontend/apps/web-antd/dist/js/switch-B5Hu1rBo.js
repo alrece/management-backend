@@ -1,0 +1,1 @@
+import{n as e,r as t,t as n}from"./switch-WXENII2-.js";export{n as SwitchSizes,t as default,e as switchProps};

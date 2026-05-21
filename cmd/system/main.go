@@ -59,12 +59,23 @@ func main() {
 	sqlDB.SetMaxOpenConns(config.C.MySQL.MaxOpenConns)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// 连接 Redis
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     config.C.Redis.Addr(),
-		Password: config.C.Redis.Password,
-		DB:       config.C.Redis.DB,
-	})
+	// 连接 Redis（支持 Sentinel）
+	var rdb *redis.Client
+	if config.C.Redis.Sentinel.Enabled {
+		rdb = redis.NewFailoverClient(&redis.FailoverOptions{
+			MasterName:    config.C.Redis.Sentinel.MasterName,
+			SentinelAddrs: config.C.Redis.Sentinel.Addrs,
+			SentinelPassword: config.C.Redis.Sentinel.Password,
+			Password:      config.C.Redis.Password,
+			DB:            config.C.Redis.DB,
+		})
+	} else {
+		rdb = redis.NewClient(&redis.Options{
+			Addr:     config.C.Redis.Addr(),
+			Password: config.C.Redis.Password,
+			DB:       config.C.Redis.DB,
+		})
+	}
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
 		zapLogger.Fatal("Redis 连接失败", zap.Error(err))
 	}
@@ -76,7 +87,7 @@ func main() {
 	engine.Use(middleware.Recovery(zapLogger))
 
 	// 注册路由
-	router.Setup(engine, db, rdb, zapLogger)
+	cleanup := router.Setup(engine, db, rdb, zapLogger)
 
 	// 启动服务
 	addr := fmt.Sprintf(":%d", config.C.Server.Port)
@@ -103,6 +114,7 @@ func main() {
 
 	sqlDB.Close()
 	rdb.Close()
+	cleanup()
 	zapLogger.Info("服务已关闭")
 }
 

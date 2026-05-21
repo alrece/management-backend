@@ -1,0 +1,1 @@
+var e=`https://github.com/yudaocode/yudao-ui-admin-vben`,t=`https://doc.iocoder.cn/`,n=`https://www.vben.pro`;export{e as n,n as r,t};

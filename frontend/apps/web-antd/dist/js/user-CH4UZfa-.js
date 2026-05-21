@@ -1,0 +1,1 @@
+import{n as e}from"./pinia-I5J8xoZT.js";var t=e(`core-user`,{actions:{setUserInfo(e){this.userInfo=e},setUserRoles(e){this.userRoles=e}},state:()=>({userInfo:null,userRoles:[]})});export{t};

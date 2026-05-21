@@ -1,4 +1,4 @@
-.PHONY: build run test clean swagger lint
+.PHONY: build run test clean swagger lint proto
 
 APP_NAME := management-backend
 ENTRY := cmd/system/main.go
@@ -31,6 +31,12 @@ test-one:
 ## Swagger 文档生成
 swagger:
 	swag init -g $(ENTRY) -o api/swagger
+
+## Proto 生成 Go 代码
+proto:
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go-grpc_out=. --go-grpc_opt=paths=source_relative \
+		api/proto/system/*.proto
 
 ## 格式化
 fmt:

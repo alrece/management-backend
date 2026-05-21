@@ -1,0 +1,45 @@
+# Traefik 动态配置
+# Consul Catalog 服务自动发现需注册 traefik.enable=true 标签
+# 以下为文件路由规则，用于 Consul 不可用时的兜底
+
+http:
+  middlewares:
+    rate-limit:
+      rateLimit:
+        average: 100
+        burst: 200
+
+  routers:
+    system-service:
+      rule: "PathPrefix(`/api/system`) || PathPrefix(`/api/auth`)"
+      service: system-service
+      entryPoints:
+        - web
+
+    job-service:
+      rule: "PathPrefix(`/api/job`)"
+      service: job-service
+      entryPoints:
+        - web
+
+    workflow-service:
+      rule: "PathPrefix(`/api/workflow`)"
+      service: workflow-service
+      entryPoints:
+        - web
+
+  services:
+    system-service:
+      loadBalancer:
+        servers:
+          - url: "http://mb-system-service:8081"
+
+    job-service:
+      loadBalancer:
+        servers:
+          - url: "http://mb-job-service:8082"
+
+    workflow-service:
+      loadBalancer:
+        servers:
+          - url: "http://mb-workflow-service:8083"

@@ -1,0 +1,29 @@
+
+@reference "@vben/tailwind-config/theme";
+.tabs-chrome__item[data-v-62fdb4ca]:not(.dragging) {
+@apply cursor-pointer;
+}
+.tabs-chrome__item:not(.dragging):hover:not(.is-active)
+  + .tabs-chrome__item
+  .tabs-chrome__divider[data-v-62fdb4ca] {
+@apply opacity-0;
+}
+.tabs-chrome__item:not(.dragging):hover:not(.is-active) .tabs-chrome__divider[data-v-62fdb4ca] {
+@apply opacity-0;
+}
+.tabs-chrome__item:not(.dragging):hover:not(.is-active)
+  .tabs-chrome__background[data-v-62fdb4ca] {
+@apply pb-0.5;
+}
+.tabs-chrome__item:not(.dragging):hover:not(.is-active)
+  .tabs-chrome__background-content[data-v-62fdb4ca] {
+@apply bg-accent mx-0.5 rounded-md;
+}
+.tabs-chrome__item:not(.dragging).is-active[data-v-62fdb4ca] {
+@apply z-[2];
+}
+.tabs-chrome__item:not(.dragging).is-active
+  + .tabs-chrome__item
+  .tabs-chrome__divider[data-v-62fdb4ca] {
+@apply opacity-0!;
+}

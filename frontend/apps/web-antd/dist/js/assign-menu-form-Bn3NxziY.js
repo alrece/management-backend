@@ -1,0 +1,1 @@
+import{t as e}from"./assign-menu-form-BojOeefW.js";export{e as default};

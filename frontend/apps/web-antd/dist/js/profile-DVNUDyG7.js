@@ -1,0 +1,1 @@
+import{t as e}from"./request-Dyqx0DMZ.js";function t(t){return e.put(`/system/user/profile`,t)}function n(t){return e.put(`/system/user/password`,t)}export{t as n,n as t};

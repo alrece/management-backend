@@ -1,0 +1,1 @@
+import{t as e}from"./profile-user-DiJgi54O.js";export{e as default};

@@ -11,6 +11,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// UserProfileUpdateReq 个人信息更新请求
+type UserProfileUpdateReq struct {
+	ID       int64
+	Nickname string
+	Email    string
+	Mobile   string
+	Sex      int
+}
+
 // UserService 用户业务接口
 type UserService interface {
 	Create(ctx context.Context, req *smodel.UserCreateReq, creator int64, tenantID int64) (int64, error)
@@ -18,6 +27,9 @@ type UserService interface {
 	Delete(ctx context.Context, id int64) error
 	GetByID(ctx context.Context, id int64) (*smodel.UserResp, error)
 	GetByUsername(ctx context.Context, username string) (*smodel.User, error)
+	GetRawByID(ctx context.Context, id int64) (*smodel.User, error)
+	UpdateProfile(ctx context.Context, req *UserProfileUpdateReq) error
+	UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error
 	Page(ctx context.Context, req *smodel.UserPageReq) ([]smodel.UserResp, int64, error)
 }
 
@@ -110,6 +122,32 @@ func (s *userService) Page(ctx context.Context, req *smodel.UserPageReq) ([]smod
 		resp = append(resp, *toResp(&list[i]))
 	}
 	return resp, total, nil
+}
+
+func (s *userService) GetRawByID(ctx context.Context, id int64) (*smodel.User, error) {
+	return s.repo.GetByID(ctx, id)
+}
+
+func (s *userService) UpdateProfile(ctx context.Context, req *UserProfileUpdateReq) error {
+	user, err := s.repo.GetByID(ctx, req.ID)
+	if err != nil {
+		return errcode.Err(errcode.UserNotFound)
+	}
+	user.Nickname = req.Nickname
+	user.Email = req.Email
+	user.Mobile = req.Mobile
+	user.Sex = req.Sex
+	user.Updater = req.ID
+	return s.repo.Update(ctx, user)
+}
+
+func (s *userService) UpdatePassword(ctx context.Context, userID int64, hashedPassword string) error {
+	user, err := s.repo.GetByID(ctx, userID)
+	if err != nil {
+		return errcode.Err(errcode.UserNotFound)
+	}
+	user.Password = hashedPassword
+	return s.repo.UpdatePassword(ctx, user)
 }
 
 // toResp Entity → Resp 转换

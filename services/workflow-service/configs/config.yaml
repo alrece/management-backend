@@ -1,0 +1,35 @@
+server:
+  port: 8083
+  mode: debug
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: mb_user
+  password: ""
+  database: management_backend
+  charset: utf8mb4
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: ""
+
+snowflake:
+  node: 3
+
+n8n:
+  base-url: "http://localhost:5678"
+  api-key: ""
+  timeout: 30
+  exec-timeout: 120
+  max-retries: 3
+
+consul:
+  enabled: false
+  address: "consul:8500"
+  service-addr: "mb-workflow-service"

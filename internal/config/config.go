@@ -22,6 +22,9 @@ type Config struct {
 	CORS          CORSConfig          `mapstructure:"cors"`
 	OSS           OSSConfig           `mapstructure:"oss"`
 	LoginSecurity LoginSecurityConfig `mapstructure:"login-security"`
+	Consul        ConsulConfig        `mapstructure:"consul"`
+	GRPC          GRPCConfig          `mapstructure:"grpc"`
+	Telemetry     TelemetryConfig     `mapstructure:"telemetry"`
 }
 
 type ServerConfig struct {
@@ -51,6 +54,14 @@ type RedisConfig struct {
 	Port     int    `mapstructure:"port"`
 	Password string `mapstructure:"password"`
 	DB       int    `mapstructure:"db"`
+	Sentinel RedisSentinelConfig `mapstructure:"sentinel"`
+}
+
+type RedisSentinelConfig struct {
+	Enabled    bool     `mapstructure:"enabled"`
+	MasterName string   `mapstructure:"master-name"`
+	Addrs      []string `mapstructure:"addrs"`
+	Password   string   `mapstructure:"password"`
 }
 
 func (r RedisConfig) Addr() string {
@@ -122,6 +133,22 @@ type LoginSecurityConfig struct {
 	RateLimitPerIP  int `mapstructure:"rate-limit-per-ip"`
 	RateLimitPerAcct int `mapstructure:"rate-limit-per-acct"`
 	PasswordMinLen  int `mapstructure:"password-min-len"`
+}
+
+type ConsulConfig struct {
+	Enabled     bool   `mapstructure:"enabled"`
+	Address     string `mapstructure:"address"`
+	ServiceAddr string `mapstructure:"service-addr"`
+}
+
+type GRPCConfig struct {
+	Port int `mapstructure:"port"`
+}
+
+type TelemetryConfig struct {
+	Enabled   bool    `mapstructure:"enabled"`
+	Endpoint  string  `mapstructure:"endpoint"`
+	SampleRate float64 `mapstructure:"sample-rate"`
 }
 
 // Validate 启动时校验敏感配置

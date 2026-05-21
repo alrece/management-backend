@@ -1,0 +1,1 @@
+import{t as e}from"./assign-data-permission-form-DHmnIgtM.js";export{e as default};

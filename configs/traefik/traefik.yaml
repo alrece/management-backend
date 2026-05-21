@@ -1,0 +1,21 @@
+# Traefik 静态配置
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+  websecure:
+    address: ":443"
+
+providers:
+  consulCatalog:
+    endpoint: "consul:8500"
+    exposedByDefault: false
+    refreshInterval: 10s
+  file:
+    filename: /etc/traefik/dynamic.yaml
+
+log:
+  level: INFO

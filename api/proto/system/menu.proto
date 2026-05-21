@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package system;
+
+option go_package = "management-backend/api/proto/system";
+
+service MenuService {
+  rpc GetMenuTree(Empty) returns (MenuTreeResp);
+  rpc CreateMenu(CreateMenuReq) returns (IDResp);
+  rpc UpdateMenu(UpdateMenuReq) returns (Empty);
+  rpc DeleteMenu(IDReq) returns (Empty);
+}
+
+message CreateMenuReq {
+  int64 parent_id = 1;
+  string menu_name = 2;
+  int32 menu_type = 3;
+  string path = 4;
+  string component = 5;
+  string permission = 6;
+  string icon = 7;
+  int32 sort = 8;
+  int32 visible = 9;
+  int32 status = 10;
+}
+
+message UpdateMenuReq {
+  int64 id = 1;
+  int64 parent_id = 2;
+  string menu_name = 3;
+  int32 menu_type = 4;
+  string path = 5;
+  string component = 6;
+  string permission = 7;
+  string icon = 8;
+  int32 sort = 9;
+  int32 visible = 10;
+  int32 status = 11;
+}
+
+message MenuNode {
+  int64 id = 1;
+  int64 parent_id = 2;
+  string menu_name = 3;
+  int32 menu_type = 4;
+  string path = 5;
+  string component = 6;
+  string permission = 7;
+  string icon = 8;
+  int32 sort = 9;
+  int32 visible = 10;
+  int32 status = 11;
+  repeated MenuNode children = 12;
+}
+
+message MenuTreeResp { repeated MenuNode list = 1; }

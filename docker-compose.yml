@@ -1,0 +1,176 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: mb-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MB_MYSQL_PASSWORD:-root123}
+      MYSQL_DATABASE: management
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7-alpine
+    container_name: mb-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  redis-sentinel-1:
+    image: redis:7-alpine
+    container_name: mb-sentinel-1
+    depends_on:
+      - redis
+    ports:
+      - "26379:26379"
+    volumes:
+      - ./configs/redis/sentinel.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+
+  redis-sentinel-2:
+    image: redis:7-alpine
+    container_name: mb-sentinel-2
+    depends_on:
+      - redis
+    ports:
+      - "26380:26379"
+    volumes:
+      - ./configs/redis/sentinel.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+
+  redis-sentinel-3:
+    image: redis:7-alpine
+    container_name: mb-sentinel-3
+    depends_on:
+      - redis
+    ports:
+      - "26381:26379"
+    volumes:
+      - ./configs/redis/sentinel.conf:/etc/redis/sentinel.conf
+    command: redis-sentinel /etc/redis/sentinel.conf
+
+  minio:
+    image: minio/minio:latest
+    container_name: mb-minio
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+
+  consul:
+    image: hashicorp/consul:1.15
+    container_name: mb-consul
+    ports:
+      - "8500:8500"
+    command: agent -dev -client=0.0.0.0
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.50
+    container_name: mb-jaeger
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+    ports:
+      - "16686:16686"
+      - "14268:14268"
+
+  traefik:
+    image: traefik:v3.0
+    container_name: mb-traefik
+    depends_on:
+      - consul
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - ./configs/traefik/traefik.yaml:/etc/traefik/traefik.yaml
+      - ./configs/traefik/dynamic.yaml:/etc/traefik/dynamic.yaml
+
+  mb-job-service:
+    build:
+      context: ./services/job-service
+      dockerfile: Dockerfile
+    container_name: mb-job-service
+    depends_on:
+      - mysql
+      - redis
+      - consul
+    environment:
+      JOB_MYSQL_HOST: mysql
+      JOB_MYSQL_PORT: "3306"
+      JOB_MYSQL_USERNAME: root
+      JOB_MYSQL_PASSWORD: ${MB_MYSQL_PASSWORD:-root123}
+      JOB_MYSQL_DATABASE: management_backend
+      JOB_REDIS_HOST: redis
+      JOB_REDIS_PORT: "6379"
+      JOB_JWT_SECRET: ${MB_JWT_SECRET:-change-me-in-production}
+      JOB_CONSUL_ENABLED: "true"
+      JOB_CONSUL_ADDRESS: "consul:8500"
+      JOB_CONSUL_SERVICE_ADDR: "mb-job-service"
+    ports:
+      - "8082:8082"
+
+  mb-workflow-service:
+    build:
+      context: ./services/workflow-service
+      dockerfile: Dockerfile
+    container_name: mb-workflow-service
+    depends_on:
+      - mysql
+      - redis
+      - consul
+    environment:
+      WF_MYSQL_HOST: mysql
+      WF_MYSQL_PORT: "3306"
+      WF_MYSQL_USERNAME: root
+      WF_MYSQL_PASSWORD: ${MB_MYSQL_PASSWORD:-root123}
+      WF_MYSQL_DATABASE: management_backend
+      WF_REDIS_HOST: redis
+      WF_REDIS_PORT: "6379"
+      WF_JWT_SECRET: ${MB_JWT_SECRET:-change-me-in-production}
+      WF_CONSUL_ENABLED: "true"
+      WF_CONSUL_ADDRESS: "consul:8500"
+      WF_CONSUL_SERVICE_ADDR: "mb-workflow-service"
+      WF_N8N_BASE_URL: "http://mb-n8n:5678"
+      WF_N8N_API_KEY: ${MB_N8N_API_KEY:-}
+    ports:
+      - "8083:8083"
+
+  mb-n8n:
+    image: n8nio/n8n:latest
+    container_name: mb-n8n
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      N8N_BASIC_AUTH_ACTIVE: "true"
+      N8N_BASIC_AUTH_USER: admin
+      N8N_BASIC_AUTH_PASSWORD: ${MB_N8N_PASSWORD:-admin123}
+      DB_TYPE: mysql
+      DB_MYSQL_HOST: mysql
+      DB_MYSQL_PORT: "3306"
+      DB_MYSQL_DATABASE: n8n
+      DB_MYSQL_USER: root
+      DB_MYSQL_PASSWORD: ${MB_MYSQL_PASSWORD:-root123}
+      N8N_PORT: "5678"
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+
+volumes:
+  mysql_data:
+  redis_data:
+  minio_data:
+  n8n_data:

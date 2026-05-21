@@ -1,0 +1,1 @@
+import{t as e}from"./base-info-CM_4Lj5E.js";export{e as default};

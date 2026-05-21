@@ -2,72 +2,70 @@ package multitenant
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"os"
-	"path/filepath"
 
 	"management-backend/internal/config"
-	"management-backend/internal/module/system/repository"
 
+	"github.com/pressly/goose/v3"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
 
-// Migrator Schema 迁移工具
+// Migrator Schema 迁移工具（基于 goose）
 type Migrator struct {
-	tenantRepo    repository.TenantRepo
 	migrationsDir string
 }
 
 // NewMigrator 创建迁移器
-func NewMigrator(tenantRepo repository.TenantRepo) *Migrator {
+func NewMigrator() *Migrator {
 	return &Migrator{
-		tenantRepo:    tenantRepo,
 		migrationsDir: "scripts/sql/migrations",
 	}
 }
 
 // MigrateDefault 对默认库执行迁移
 func (m *Migrator) MigrateDefault(ctx context.Context) error {
-	cfg := config.C.MySQL
-	db, err := gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{})
+	db, err := m.openDefault()
 	if err != nil {
-		return fmt.Errorf("连接默认库失败: %w", err)
+		return err
 	}
-	defer func() {
-		sqlDB, _ := db.DB()
-		if sqlDB != nil {
-			_ = sqlDB.Close()
-		}
-	}()
-	return m.executeMigrations(ctx, db)
+	defer db.Close()
+	return goose.UpContext(ctx, db, m.migrationsDir)
 }
 
 // MigrateTenant 对指定租户库执行迁移
 func (m *Migrator) MigrateTenant(ctx context.Context, tenantID int64) error {
-	tenant, err := m.tenantRepo.GetByID(ctx, tenantID)
-	if err != nil {
-		return fmt.Errorf("租户不存在: %w", err)
-	}
-
-	db, err := m.connectTenantDB(tenant.DBName)
+	// 通过默认库获取租户数据库名
+	defaultDB, err := gorm.Open(mysql.Open(config.C.MySQL.DSN()), &gorm.Config{})
 	if err != nil {
 		return err
 	}
 	defer func() {
-		sqlDB, _ := db.DB()
+		sqlDB, _ := defaultDB.DB()
 		if sqlDB != nil {
 			_ = sqlDB.Close()
 		}
 	}()
 
-	return m.executeMigrations(ctx, db)
+	var dbName string
+	if err := defaultDB.WithContext(ctx).Table("sys_tenant").
+		Where("id = ? AND deleted = 0", tenantID).
+		Select("db_name").Scan(&dbName).Error; err != nil {
+		return fmt.Errorf("租户不存在: %w", err)
+	}
+
+	db, err := m.openDB(dbName)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	return goose.UpContext(ctx, db, m.migrationsDir)
 }
 
 // MigrateAll 对所有已就绪租户执行迁移
 func (m *Migrator) MigrateAll(ctx context.Context) error {
-	cfg := config.C.MySQL
-	defaultDB, err := gorm.Open(mysql.Open(cfg.DSN()), &gorm.Config{})
+	defaultDB, err := gorm.Open(mysql.Open(config.C.MySQL.DSN()), &gorm.Config{})
 	if err != nil {
 		return err
 	}
@@ -91,30 +89,14 @@ func (m *Migrator) MigrateAll(ctx context.Context) error {
 	return lastErr
 }
 
-func (m *Migrator) connectTenantDB(dbName string) (*gorm.DB, error) {
-	cfg := config.C.MySQL
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		cfg.Username, cfg.Password, cfg.Host, cfg.Port, dbName, cfg.Charset)
-	return gorm.Open(mysql.Open(dsn), &gorm.Config{})
+func (m *Migrator) openDefault() (*sql.DB, error) {
+	return m.openDB(config.C.MySQL.Database)
 }
 
-func (m *Migrator) executeMigrations(ctx context.Context, db *gorm.DB) error {
-	entries, err := os.ReadDir(m.migrationsDir)
-	if err != nil {
-		return nil // 目录不存在则跳过
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() || filepath.Ext(entry.Name()) != ".sql" {
-			continue
-		}
-		content, err := os.ReadFile(filepath.Join(m.migrationsDir, entry.Name()))
-		if err != nil {
-			return fmt.Errorf("读取 %s 失败: %w", entry.Name(), err)
-		}
-		if err := db.WithContext(ctx).Exec(string(content)).Error; err != nil {
-			return fmt.Errorf("执行 %s 失败: %w", entry.Name(), err)
-		}
-	}
-	return nil
+func (m *Migrator) openDB(dbName string) (*sql.DB, error) {
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
+		config.C.MySQL.Username, config.C.MySQL.Password,
+		config.C.MySQL.Host, config.C.MySQL.Port,
+		dbName, config.C.MySQL.Charset)
+	return goose.OpenDBWithDriver("mysql", dsn)
 }

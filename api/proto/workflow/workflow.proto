@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package workflow;
+
+option go_package = "management-backend/api/proto/workflow";
+
+service WorkflowService {
+  // 创建工作流
+  rpc CreateWorkflow(CreateWorkflowReq) returns (CreateWorkflowResp);
+  // 激活工作流
+  rpc ActivateWorkflow(WorkflowIDReq) returns (Empty);
+  // 停用工作流
+  rpc DeactivateWorkflow(WorkflowIDReq) returns (Empty);
+  // 执行工作流
+  rpc ExecuteWorkflow(ExecuteWorkflowReq) returns (ExecuteWorkflowResp);
+  // 查询执行实例
+  rpc GetInstance(GetInstanceReq) returns (InstanceResp);
+}
+
+message CreateWorkflowReq {
+  string name = 1;
+  int64 category_id = 2;
+  int64 tenant_id = 3;
+  int64 creator = 4;
+}
+
+message CreateWorkflowResp {
+  int64 id = 1;
+}
+
+message WorkflowIDReq {
+  int64 id = 1;
+  int64 tenant_id = 2;
+}
+
+message ExecuteWorkflowReq {
+  int64 workflow_id = 1;
+  int64 tenant_id = 2;
+  int64 creator = 3;
+  string variables = 4;
+}
+
+message ExecuteWorkflowResp {
+  int64 instance_id = 1;
+}
+
+message GetInstanceReq {
+  int64 id = 1;
+  int64 tenant_id = 2;
+}
+
+message InstanceResp {
+  int64 id = 1;
+  int64 workflow_id = 2;
+  string status = 3;
+  string variables = 4;
+  string result = 5;
+  int64 duration_ms = 6;
+  string error_msg = 7;
+  string started_at = 8;
+}
+
+message Empty {}

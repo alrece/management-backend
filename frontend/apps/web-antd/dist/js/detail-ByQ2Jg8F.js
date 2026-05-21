@@ -1,0 +1,1 @@
+import{t as e}from"./detail-ESajREX5.js";export{e as default};

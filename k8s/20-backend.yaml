@@ -1,0 +1,148 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: mb
+data:
+  config.yaml: |
+    server:
+      port: 8081
+      mode: release
+
+    mysql:
+      host: mysql.mb.svc.cluster.local
+      port: 3306
+      username: mb_user
+      password: "mb_pass_2026"
+      database: management_backend
+      charset: utf8mb4
+      max-idle-conns: 10
+      max-open-conns: 100
+      log-level: warn
+
+    redis:
+      host: redis.mb.svc.cluster.local
+      port: 6379
+      password: ""
+      db: 0
+      sentinel:
+        enabled: false
+
+    jwt:
+      secret: "k8s-deploy-jwt-secret-change-in-prod"
+      access-expire: 1800
+      refresh-expire: 604800
+      issuer: management-backend
+
+    log:
+      level: info
+      format: json
+      output: stdout
+      file:
+        enable: false
+
+    snowflake:
+      node: 1
+
+    tenant:
+      enable: true
+      ignore-tables:
+        - sys_menu
+        - sys_tenant
+        - sys_role_menu
+      max-pool-size: 50
+      idle-timeout: 30
+      max-conns-per-tenant: 10
+      db-name-prefix: "mb_tenant_"
+
+    cors:
+      allow-origins:
+        - "*"
+      allow-methods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allow-headers:
+        - "*"
+      expose-headers:
+        - Content-Length
+      allow-credentials: true
+      max-age: 43200
+
+    auth:
+      login-lock:
+        enabled: true
+        max-retries: 5
+        lock-duration: 300
+      blacklist:
+        enabled: true
+
+    casbin:
+      model: ""
+      policy-adapter: db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mb-backend
+  namespace: mb
+  labels:
+    app: mb-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mb-backend
+  template:
+    metadata:
+      labels:
+        app: mb-backend
+    spec:
+      containers:
+        - name: mb-backend
+          image: mb-backend:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+          volumeMounts:
+            - name: config
+              mountPath: /app/configs/config.yaml
+              subPath: config.yaml
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      volumes:
+        - name: config
+          configMap:
+            name: backend-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mb-backend
+  namespace: mb
+spec:
+  selector:
+    app: mb-backend
+  ports:
+    - port: 8081
+      targetPort: 8081

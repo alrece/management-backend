@@ -13,10 +13,10 @@ import (
 
 func TestLoginLock_FailAndLock(t *testing.T) {
 	rdb := testutil.NewTestRedis(t)
-	lock := NewLoginLock(rdb)
 	ctx := context.Background()
 
 	config.C.LoginSecurity.MaxFailCount = 3
+	lock := NewLoginLock(rdb)
 
 	for i := 0; i < 2; i++ {
 		err := lock.RecordFail(ctx, "testuser")

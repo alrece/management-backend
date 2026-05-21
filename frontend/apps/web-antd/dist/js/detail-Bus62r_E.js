@@ -1,0 +1,1 @@
+import{t as e}from"./detail-M3iLxwxs.js";export{e as default};

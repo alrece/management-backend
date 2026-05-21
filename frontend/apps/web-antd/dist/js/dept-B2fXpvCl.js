@@ -1,0 +1,1 @@
+import{t as e}from"./request-Dyqx0DMZ.js";function t(){return e.get(`/system/dept/tree`)}function n(t){return e.post(`/system/dept`,t)}function r(t){return e.put(`/system/dept`,t)}function i(t){return e.delete(`/system/dept/${t}`)}var a=t,o=t;function s(e){return Promise.resolve(null)}function c(e){return Promise.resolve()}export{o as a,s as i,i as n,a as o,c as r,r as s,n as t};

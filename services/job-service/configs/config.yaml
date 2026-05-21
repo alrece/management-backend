@@ -1,0 +1,28 @@
+server:
+  port: 8082
+  mode: debug
+
+mysql:
+  host: 127.0.0.1
+  port: 3306
+  username: mb_user
+  password: ""
+  database: management_backend
+  charset: utf8mb4
+
+redis:
+  host: 127.0.0.1
+  port: 6379
+  password: ""
+  db: 0
+
+jwt:
+  secret: ""
+
+snowflake:
+  node: 2
+
+consul:
+  enabled: false
+  address: "consul:8500"
+  service-addr: "mb-job-service"

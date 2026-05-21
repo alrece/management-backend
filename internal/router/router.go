@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"management-backend/internal/auth"
 	"management-backend/internal/authz"
 	"management-backend/internal/middleware"
@@ -17,13 +19,15 @@ import (
 )
 
 // Setup 初始化路由和依赖注入（Repository → Service → Handler）
-func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logger) {
+// 返回清理函数，调用方应在关闭时调用以释放资源
+func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logger) func() {
 	// 初始化认证组件
 	middleware.InitAuth(rdb)
 	middleware.InitTenant()
 
-	// 初始化 Casbin 权限管理
+	// 初始化 Casbin 权限管理（每小时淘汰 30 分钟未使用的 enforcer）
 	enforcerMgr := authz.NewEnforcerManager(rdb)
+	enforcerMgr.StartEviction(time.Hour, 30*time.Minute)
 	middleware.InitPermission(enforcerMgr)
 
 	loginLock := auth.NewLoginLock(rdb)
@@ -105,5 +109,9 @@ func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logge
 
 		system.RegisterRoutes(authed, userHandler, tenantHandler, roleHandler, menuHandler,
 			deptHandler, postHandler, dictHandler, paramHandler, noticeHandler, logHandler, profileHandler, fileHandler)
+	}
+
+	return func() {
+		enforcerMgr.Stop()
 	}
 }
