@@ -24,7 +24,6 @@ export default defineConfig(async () => {
             let mockData: any = null;
             function loadMockData() {
               const dataPath = path.resolve(__dirname, 'src/mock/data.ts');
-              // 使用 Vite 的 fs 读取（模拟）
               return {
                 users: [
                   { id: 1, username: 'admin', nickname: '管理员', email: 'admin@mb.com', mobile: '13800000000', sex: 1, avatar: '', status: 0, deptId: 100, tenantId: 1, createTime: '2026-01-01 00:00:00', remark: '' },
@@ -39,6 +38,15 @@ export default defineConfig(async () => {
                     { id: 12, parentId: 1, menuName: '菜单管理', menuType: 2, path: 'menu', component: '/system/menu/index', permission: 'system:menu:query', icon: 'ant-design:menu-outlined', sort: 3, visible: 0, status: 0, children: [] },
                     { id: 13, parentId: 1, menuName: '部门管理', menuType: 2, path: 'dept', component: '/system/dept/index', permission: 'system:dept:query', icon: 'ant-design:apartment-outlined', sort: 4, visible: 0, status: 0, children: [] },
                   ] },
+                  { id: 100, parentId: 0, menuName: '定时任务', menuType: 1, path: '/job', component: '', permission: '', icon: 'ant-design:clock-circle-outlined', sort: 20, visible: 0, status: 0, children: [
+                    { id: 101, parentId: 100, menuName: '任务管理', menuType: 2, path: 'task', component: '/job/task/index', permission: 'job:task:query', icon: '', sort: 1, visible: 0, status: 0, children: [] },
+                    { id: 102, parentId: 100, menuName: '执行日志', menuType: 2, path: 'log', component: '/job/log/index', permission: 'job:log:query', icon: '', sort: 2, visible: 0, status: 0, children: [] },
+                  ] },
+                  { id: 200, parentId: 0, menuName: '工作流管理', menuType: 1, path: '/workflow', component: '', permission: '', icon: 'ant-design:branches-outlined', sort: 30, visible: 0, status: 0, children: [
+                    { id: 201, parentId: 200, menuName: '流程分类', menuType: 2, path: 'category', component: '/workflow/category/index', permission: 'workflow:category:query', icon: '', sort: 1, visible: 0, status: 0, children: [] },
+                    { id: 202, parentId: 200, menuName: '流程管理', menuType: 2, path: 'workflow', component: '/workflow/workflow/index', permission: 'workflow:workflow:query', icon: '', sort: 2, visible: 0, status: 0, children: [] },
+                    { id: 203, parentId: 200, menuName: '执行实例', menuType: 2, path: 'instance', component: '/workflow/instance/index', permission: 'workflow:instance:query', icon: '', sort: 3, visible: 0, status: 0, children: [] },
+                  ] },
                 ],
                 depts: [
                   { id: 100, parentId: 0, name: '总公司', sort: 0, leaderUserId: 1, status: 0, createTime: '2026-01-01 00:00:00' },
@@ -46,6 +54,25 @@ export default defineConfig(async () => {
                 ],
                 posts: [
                   { id: 1, postCode: 'dev', postName: '开发工程师', sort: 1, status: 0, remark: '', createTime: '2026-01-01 00:00:00' },
+                ],
+                jobTasks: [
+                  { id: 1, name: '数据备份', handler: 'DataBackupHandler', cronExpr: '0 0 2 * * ?', params: '{}', status: 0, remark: '每日凌晨2点', creator: 1 },
+                  { id: 2, name: '缓存清理', handler: 'CacheCleanHandler', cronExpr: '0 0 3 * * ?', params: '{}', status: 0, remark: '每日凌晨3点', creator: 1 },
+                ],
+                jobExecLogs: [
+                  { id: 1, taskId: 1, taskName: '数据备份', triggerType: 1, status: 1, durationMs: 3200, result: '备份完成', error: '', startTime: '2026-05-22 02:00:00' },
+                  { id: 2, taskId: 2, taskName: '缓存清理', triggerType: 2, status: 1, durationMs: 1500, result: '清理完成', error: '', startTime: '2026-05-22 03:00:00' },
+                ],
+                wfCategories: [
+                  { id: 1, name: '审批流程', parentId: 0, sort: 0, children: [] },
+                  { id: 2, name: '数据同步', parentId: 0, sort: 1, children: [] },
+                ],
+                wfWorkflows: [
+                  { id: 1, name: '请假审批', categoryId: 1, n8nWorkflowId: '', paramsSchema: '{}', status: 'ACTIVE', creator: 1, createdAt: '2026-05-01', updater: 1, updatedAt: '2026-05-01' },
+                  { id: 2, name: '用户数据同步', categoryId: 2, n8nWorkflowId: '', paramsSchema: '{}', status: 'DRAFT', creator: 1, createdAt: '2026-05-10', updater: 1, updatedAt: '2026-05-10' },
+                ],
+                wfInstances: [
+                  { id: 1, workflowId: 1, n8nExecutionId: 'exec_001', status: 'SUCCESS', variables: '{}', result: '{"approved": true}', durationMs: 1500, errorMsg: '', startedAt: '2026-05-22 10:00:00', finishedAt: '2026-05-22 10:00:01' },
                 ],
               };
             }
@@ -78,6 +105,12 @@ export default defineConfig(async () => {
                     'system:tenant:create', 'system:tenant:update', 'system:tenant:delete', 'system:tenant:query', 'system:tenant:update-package',
                     'system:login-log:query', 'system:login-log:export',
                     'system:operate-log:query', 'system:operate-log:export',
+                    'job:task:create', 'job:task:update', 'job:task:delete', 'job:task:query', 'job:task:trigger',
+                    'job:log:query',
+                    'workflow:category:create', 'workflow:category:update', 'workflow:category:delete', 'workflow:category:query',
+                    'workflow:workflow:create', 'workflow:workflow:update', 'workflow:workflow:delete', 'workflow:workflow:query',
+                    'workflow:workflow:activate', 'workflow:workflow:execute',
+                    'workflow:instance:query',
                   ],
                   menus: d.menus,
                 };
@@ -130,6 +163,45 @@ export default defineConfig(async () => {
               // 岗位 & 字典精简列表
               { match: (m, p) => m === 'GET' && p === '/api/system/post/simple-list', handle: () => loadMockData().posts },
               { match: (m, p) => m === 'GET' && p === '/api/system/dict-data/simple-list', handle: () => [] },
+
+              // === Job 定时任务 ===
+              { match: (m, p) => m === 'GET' && p === '/api/job/tasks/page', handle: (_, q) => {
+                const d = loadMockData();
+                const page = Number(q.page) || 1, ps = Number(q.pageSize) || 10;
+                return { list: d.jobTasks.slice((page-1)*ps, page*ps), total: d.jobTasks.length };
+              }},
+              { match: (m, p) => m === 'POST' && p === '/api/job/tasks', handle: (b) => Date.now() },
+              { match: (m, p) => m === 'PUT' && p.match(/^\/api\/job\/tasks\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'DELETE' && p.match(/^\/api\/job\/tasks\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'POST' && p.match(/^\/api\/job\/tasks\/\d+\/trigger$/), handle: () => Date.now() },
+              { match: (m, p) => m === 'GET' && p === '/api/job/execution-logs/page', handle: (_, q) => {
+                const d = loadMockData();
+                const page = Number(q.page) || 1, ps = Number(q.pageSize) || 10;
+                return { list: d.jobExecLogs.slice((page-1)*ps, page*ps), total: d.jobExecLogs.length };
+              }},
+
+              // === Workflow 工作流 ===
+              { match: (m, p) => m === 'GET' && p === '/api/workflow/categories/tree', handle: () => loadMockData().wfCategories },
+              { match: (m, p) => m === 'POST' && p === '/api/workflow/categories', handle: (b) => Date.now() },
+              { match: (m, p) => m === 'PUT' && p.match(/^\/api\/workflow\/categories\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'DELETE' && p.match(/^\/api\/workflow\/categories\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'GET' && p === '/api/workflow/workflows/page', handle: (_, q) => {
+                const d = loadMockData();
+                const page = Number(q.page) || 1, ps = Number(q.pageSize) || 10;
+                return { list: d.wfWorkflows.slice((page-1)*ps, page*ps), total: d.wfWorkflows.length };
+              }},
+              { match: (m, p) => m === 'GET' && p.match(/^\/api\/workflow\/workflows\/\d+$/), handle: () => loadMockData().wfWorkflows[0] },
+              { match: (m, p) => m === 'POST' && p === '/api/workflow/workflows', handle: (b) => Date.now() },
+              { match: (m, p) => m === 'PUT' && p.match(/^\/api\/workflow\/workflows\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'DELETE' && p.match(/^\/api\/workflow\/workflows\/\d+$/), handle: () => null },
+              { match: (m, p) => m === 'PUT' && p.match(/^\/api\/workflow\/workflows\/\d+\/activate$/), handle: () => null },
+              { match: (m, p) => m === 'PUT' && p.match(/^\/api\/workflow\/workflows\/\d+\/deactivate$/), handle: () => null },
+              { match: (m, p) => m === 'POST' && p.match(/^\/api\/workflow\/workflows\/\d+\/execute$/), handle: () => Date.now() },
+              { match: (m, p) => m === 'GET' && p === '/api/workflow/instances/page', handle: (_, q) => {
+                const d = loadMockData();
+                const page = Number(q.page) || 1, ps = Number(q.pageSize) || 10;
+                return { list: d.wfInstances.slice((page-1)*ps, page*ps), total: d.wfInstances.length };
+              }},
             ];
 
             // 读取请求体
@@ -184,9 +256,19 @@ export default defineConfig(async () => {
       server: {
         allowedHosts: true,
         proxy: {
-          '/api': {
+          '/api/system': {
             changeOrigin: true,
             target: 'http://127.0.0.1:8081',
+            ws: true,
+          },
+          '/api/job': {
+            changeOrigin: true,
+            target: 'http://127.0.0.1:8082',
+            ws: true,
+          },
+          '/api/workflow': {
+            changeOrigin: true,
+            target: 'http://127.0.0.1:8083',
             ws: true,
           },
         },
