@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"management-backend/services/workflow-service/internal/router"
 	"management-backend/services/workflow-service/internal/service"
 
+	pb "management-backend/api/proto/workflow"
 	"management-backend/pkg/authx"
 	"management-backend/pkg/discoveryx"
 	"management-backend/pkg/snowflake"
@@ -24,6 +26,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -109,6 +113,22 @@ func main() {
 	})
 	router.RegisterRoutes(authed, wfHandler, webhookHandler)
 
+	// gRPC 服务（端口 9083）
+	grpcSrv := grpc.NewServer(grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: 600}))
+	pb.RegisterWorkflowServiceServer(grpcSrv, handler.NewWorkflowGRPCHandler(wfSvc, instRepo))
+
+	grpcAddr := fmt.Sprintf(":%d", 9083)
+	grpcListener, err := net.Listen("tcp", grpcAddr)
+	if err != nil {
+		zapLogger.Fatal("gRPC 监听失败", zap.Error(err))
+	}
+	go func() {
+		zapLogger.Info("workflow-service gRPC 启动", zap.String("addr", grpcAddr))
+		if err := grpcSrv.Serve(grpcListener); err != nil {
+			zapLogger.Error("gRPC 服务异常", zap.Error(err))
+		}
+	}()
+
 	// Consul 注册
 	if config.C.Consul.Enabled {
 		registry, err := discoveryx.NewConsulRegistry(discoveryx.ConsulConfig{
@@ -157,6 +177,7 @@ func main() {
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer shutdownCancel()
 	_ = srv.Shutdown(shutdownCtx)
+	grpcSrv.GracefulStop()
 
 	zapLogger.Info("workflow-service 已关闭")
 }

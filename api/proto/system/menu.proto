@@ -4,6 +4,8 @@ package system;
 
 option go_package = "management-backend/api/proto/system";
 
+import "system/common.proto";
+
 service MenuService {
   rpc GetMenuTree(Empty) returns (MenuTreeResp);
   rpc CreateMenu(CreateMenuReq) returns (IDResp);

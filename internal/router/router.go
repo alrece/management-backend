@@ -11,6 +11,7 @@ import (
 	"management-backend/internal/module/system/handler"
 	"management-backend/internal/module/system/repository"
 	"management-backend/internal/module/system/service"
+	grpchandler "management-backend/internal/grpc/handler"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -114,4 +115,21 @@ func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logge
 	return func() {
 		enforcerMgr.Stop()
 	}
+}
+
+// GetGRPCServices 创建 gRPC handler（复用相同 DI 链）
+func GetGRPCServices(db *gorm.DB, rdb *redis.Client, logger *zap.Logger) (
+	*grpchandler.UserGRPCHandler,
+	*grpchandler.RoleGRPCHandler,
+	*grpchandler.MenuGRPCHandler,
+) {
+	enforcerMgr := authz.NewEnforcerManager(rdb)
+
+	userSvc := service.NewUserService(repository.NewUserRepo(db))
+	roleSvc := service.NewRoleService(repository.NewRoleRepo(db), repository.NewMenuRepo(db), enforcerMgr)
+	menuSvc := service.NewMenuService(repository.NewMenuRepo(db))
+
+	return grpchandler.NewUserGRPCHandler(userSvc),
+		grpchandler.NewRoleGRPCHandler(roleSvc),
+		grpchandler.NewMenuGRPCHandler(menuSvc)
 }

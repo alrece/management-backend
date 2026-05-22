@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,6 +17,7 @@ import (
 	"management-backend/services/job-service/internal/scheduler"
 	"management-backend/services/job-service/internal/service"
 
+	pb "management-backend/api/proto/job"
 	"management-backend/pkg/authx"
 	"management-backend/pkg/discoveryx"
 	"management-backend/pkg/snowflake"
@@ -24,6 +26,8 @@ import (
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -126,6 +130,22 @@ func main() {
 	})
 	router.RegisterRoutes(authed, jobHandler)
 
+	// gRPC 服务（端口 9082）
+	grpcSrv := grpc.NewServer(grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionAge: 600}))
+	pb.RegisterJobServiceServer(grpcSrv, handler.NewJobGRPCHandler(jobSvc))
+
+	grpcAddr := fmt.Sprintf(":%d", 9082)
+	grpcListener, err := net.Listen("tcp", grpcAddr)
+	if err != nil {
+		zapLogger.Fatal("gRPC 监听失败", zap.Error(err))
+	}
+	go func() {
+		zapLogger.Info("job-service gRPC 启动", zap.String("addr", grpcAddr))
+		if err := grpcSrv.Serve(grpcListener); err != nil {
+			zapLogger.Error("gRPC 服务异常", zap.Error(err))
+		}
+	}()
+
 	addr := fmt.Sprintf(":%d", config.C.Server.Port)
 	srv := &http.Server{Addr: addr, Handler: engine}
 
@@ -144,6 +164,7 @@ func main() {
 
 	sched.Stop()
 	leaderElection.Stop()
+	grpcSrv.GracefulStop()
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer shutdownCancel()

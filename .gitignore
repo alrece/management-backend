@@ -47,3 +47,9 @@ yudao-ui-admin-vben/
 
 # OpenSpec runtime
 openspec/.state/
+
+# Turbo cache
+frontend/.turbo/
+
+# VitePress timestamps
+frontend/docs/.vitepress/config/*.timestamp-*

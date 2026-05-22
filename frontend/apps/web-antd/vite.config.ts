@@ -13,6 +13,14 @@ export default defineConfig(async () => {
             const fs = require('fs');
             const path = require('path');
 
+            // 读取 mock 开关（从 .env.development 读取 VITE_USE_MOCK）
+            let useMock = true;
+            try {
+              const envContent = fs.readFileSync(path.resolve(__dirname, '.env.development'), 'utf-8');
+              const m = envContent.match(/VITE_USE_MOCK=(\w+)/);
+              if (m) useMock = m[1] === 'true';
+            } catch {}
+
             let mockData: any = null;
             function loadMockData() {
               const dataPath = path.resolve(__dirname, 'src/mock/data.ts');
@@ -146,6 +154,7 @@ export default defineConfig(async () => {
             server.middlewares.use(async (req: any, res: any, next: any) => {
               const url = req.url || '/';
               if (!url.startsWith('/api/')) return next();
+              if (!useMock) return next();
 
               if (req.method === 'OPTIONS') {
                 res.setHeader('Access-Control-Allow-Origin', '*');

@@ -16,6 +16,7 @@ type JobService interface {
 	Update(ctx context.Context, id int64, req *model.JobTaskUpdateReq) error
 	Delete(ctx context.Context, id int64) error
 	Page(ctx context.Context, req *model.JobTaskPageReq, tenantID int64) ([]model.JobTaskResp, int64, error)
+	GetByID(ctx context.Context, id int64) (*model.JobTask, error)
 	Trigger(ctx context.Context, id int64, tenantID int64) (int64, error)
 	ExecLogPage(ctx context.Context, req *model.ExecLogPageReq, tenantID int64) ([]model.ExecLogResp, int64, error)
 }
@@ -79,6 +80,10 @@ func (s *jobService) Update(ctx context.Context, id int64, req *model.JobTaskUpd
 
 func (s *jobService) Delete(ctx context.Context, id int64) error {
 	return s.taskRepo.Delete(ctx, id)
+}
+
+func (s *jobService) GetByID(ctx context.Context, id int64) (*model.JobTask, error) {
+	return s.taskRepo.GetByID(ctx, id)
 }
 
 func (s *jobService) Page(ctx context.Context, req *model.JobTaskPageReq, tenantID int64) ([]model.JobTaskResp, int64, error) {

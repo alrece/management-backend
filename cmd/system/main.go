@@ -10,14 +10,18 @@ import (
 	"time"
 
 	"management-backend/internal/config"
+	grpcserver "management-backend/internal/grpc"
 	"management-backend/internal/router"
-	"management-backend/pkg/middleware"
+	pkgmiddleware "management-backend/pkg/middleware"
 	"management-backend/pkg/snowflake"
+
+	pb "management-backend/api/proto/system"
 
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -83,13 +87,30 @@ func main() {
 	// 创建引擎
 	gin.SetMode(config.C.Server.Mode)
 	engine := gin.New()
-	engine.Use(middleware.RequestID())
-	engine.Use(middleware.Recovery(zapLogger))
+	engine.Use(pkgmiddleware.RequestID())
+	engine.Use(pkgmiddleware.Recovery(zapLogger))
+	engine.Use(pkgmiddleware.CORS(config.C.CORS.AllowedOrigins))
 
 	// 注册路由
 	cleanup := router.Setup(engine, db, rdb, zapLogger)
 
-	// 启动服务
+	// 启动 gRPC 服务（端口 9081）
+	grpcSvc := grpcserver.NewServer(9081, zapLogger, []grpc.UnaryServerInterceptor{
+		grpcserver.RecoveryInterceptor(zapLogger),
+		grpcserver.LogInterceptor(zapLogger),
+	})
+
+	// 从 router 获取 service 实例，注册 gRPC 服务
+	pbUser, pbRole, pbMenu := router.GetGRPCServices(db, rdb, zapLogger)
+	pb.RegisterUserServiceServer(grpcSvc.GRPCServer(), pbUser)
+	pb.RegisterRoleServiceServer(grpcSvc.GRPCServer(), pbRole)
+	pb.RegisterMenuServiceServer(grpcSvc.GRPCServer(), pbMenu)
+
+	if err := grpcSvc.Start(); err != nil {
+		zapLogger.Fatal("gRPC 启动失败", zap.Error(err))
+	}
+
+	// 启动 HTTP 服务
 	addr := fmt.Sprintf(":%d", config.C.Server.Port)
 	srv := &http.Server{Addr: addr, Handler: engine}
 
@@ -109,8 +130,9 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	if err := srv.Shutdown(ctx); err != nil {
-		zapLogger.Error("服务关闭失败", zap.Error(err))
+		zapLogger.Error("HTTP 关闭失败", zap.Error(err))
 	}
+	grpcSvc.Stop()
 
 	sqlDB.Close()
 	rdb.Close()

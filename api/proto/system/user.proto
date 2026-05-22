@@ -4,6 +4,8 @@ package system;
 
 option go_package = "management-backend/api/proto/system";
 
+import "system/common.proto";
+
 service UserService {
   rpc GetUser(GetUserReq) returns (UserResp);
   rpc ListUsers(ListUsersReq) returns (UserListResp);
@@ -13,8 +15,6 @@ service UserService {
 }
 
 message GetUserReq { int64 id = 1; }
-message IDReq { int64 id = 1; }
-message Empty {}
 
 message CreateUserReq {
   string username = 1;

@@ -1,0 +1,1 @@
+import{x as a}from"./theme.DLuBxzoN.js";import{p as e,q as s,v as r,u as t}from"./framework.B_e8lQlv.js";const o=e({__name:"index",setup:e=>(e,o)=>(s(),r(t(a),{duration:3e3,"end-val":3e4,"start-val":1}))}),n=e({__name:"index",setup:e=>(e,o)=>(s(),r(t(a),{duration:3e3,"end-val":2e6,"start-val":1,prefix:"$",separator:"/"}))});export{o as _,n as a};

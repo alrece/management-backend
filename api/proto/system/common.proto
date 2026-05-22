@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package system;
+
+option go_package = "management-backend/api/proto/system";
+
+// 共享消息类型，避免重复定义
+message IDReq { int64 id = 1; }
+message Empty {}
+message IDResp { int64 id = 1; }
