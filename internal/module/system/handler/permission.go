@@ -91,16 +91,18 @@ func (h *PermissionInfoHandler) GetPermissionInfo(c *gin.Context) {
 func buildFilteredMenuTree(menus []smodel.Menu, parentID int64) []smodel.MenuTreeResp {
 	var tree []smodel.MenuTreeResp
 	for _, m := range menus {
-		if m.ParentID == parentID {
-			node := smodel.MenuTreeResp{
-				ID: m.ID, ParentID: m.ParentID, MenuName: m.MenuName,
-				MenuType: m.MenuType, Path: m.Path, Component: m.Component,
-				Permission: m.Permission, Icon: m.Icon, Sort: m.Sort,
-				Visible: m.Visible, Status: m.Status,
-				Children: buildFilteredMenuTree(menus, m.ID),
-			}
-			tree = append(tree, node)
+		// 跳过按钮类型（menuType=3），按钮权限已通过 permissions 字段返回
+		if m.MenuType == 3 || m.ParentID != parentID {
+			continue
 		}
+		node := smodel.MenuTreeResp{
+			ID: m.ID, ParentID: m.ParentID, MenuName: m.MenuName,
+			MenuType: m.MenuType, Path: m.Path, Component: m.Component,
+			Permission: m.Permission, Icon: m.Icon, Sort: m.Sort,
+			Visible: m.Visible, Status: m.Status,
+			Children: buildFilteredMenuTree(menus, m.ID),
+		}
+		tree = append(tree, node)
 	}
 	return tree
 }

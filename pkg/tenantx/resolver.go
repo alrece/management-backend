@@ -6,24 +6,24 @@ import (
 	"sync"
 	"time"
 
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
 
-// MySQLConfig MySQL 连接配置
-type MySQLConfig struct {
+// PostgresConfig PostgreSQL 连接配置
+type PostgresConfig struct {
 	Host     string
 	Port     int
 	Username string
 	Password string
-	Charset  string
+	SSLMode  string
 }
 
 // DSN 生成数据源连接串
-func (m MySQLConfig) DSN(dbName string) string {
-	return fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		m.Username, m.Password, m.Host, m.Port, dbName, m.Charset)
+func (p PostgresConfig) DSN(dbName string) string {
+	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		p.Host, p.Port, p.Username, p.Password, dbName, p.SSLMode)
 }
 
 // TenantConfig 租户配置
@@ -36,15 +36,15 @@ type TenantConfig struct {
 
 // TenantResolver 租户数据库解析器
 type TenantResolver struct {
-	pool   *TenantPool
-	mu     sync.RWMutex
-	dbs    map[int64]*gorm.DB
-	mysql  MySQLConfig
-	tenant TenantConfig
+	pool     *TenantPool
+	mu       sync.RWMutex
+	dbs      map[int64]*gorm.DB
+	postgres PostgresConfig
+	tenant   TenantConfig
 }
 
 // NewTenantResolver 创建租户解析器
-func NewTenantResolver(mysqlCfg MySQLConfig, tenantCfg TenantConfig) *TenantResolver {
+func NewTenantResolver(pgCfg PostgresConfig, tenantCfg TenantConfig) *TenantResolver {
 	maxSize := tenantCfg.MaxPoolSize
 	if maxSize <= 0 {
 		maxSize = 50
@@ -55,9 +55,9 @@ func NewTenantResolver(mysqlCfg MySQLConfig, tenantCfg TenantConfig) *TenantReso
 	}
 
 	r := &TenantResolver{
-		dbs:    make(map[int64]*gorm.DB),
-		mysql:  mysqlCfg,
-		tenant: tenantCfg,
+		dbs:      make(map[int64]*gorm.DB),
+		postgres: pgCfg,
+		tenant:   tenantCfg,
 	}
 	r.pool = NewTenantPool(maxSize, idleTimeout)
 	go r.pool.cleanupLoop(context.Background())
@@ -113,7 +113,7 @@ func (r *TenantResolver) createTenantDB(tenantID int64) (*gorm.DB, error) {
 	}
 	dbName := fmt.Sprintf("%s%d", prefix, tenantID)
 
-	db, err := gorm.Open(mysql.Open(r.mysql.DSN(dbName)), &gorm.Config{
+	db, err := gorm.Open(postgres.Open(r.postgres.DSN(dbName)), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {

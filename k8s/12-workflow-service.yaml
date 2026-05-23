@@ -1,0 +1,116 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: workflow-config
+  namespace: mb
+data:
+  config.yaml: |
+    server:
+      port: 8083
+      mode: release
+
+    postgres:
+      host: postgres.mb.svc.cluster.local
+      port: 5432
+      username: mb_user
+      password: "mb_pass_2026"
+      database: management_backend
+      sslmode: disable
+      max-idle-conns: 5
+      max-open-conns: 50
+
+    redis:
+      host: redis.mb.svc.cluster.local
+      port: 6379
+      password: ""
+      db: 0
+
+    jwt:
+      secret: "k8s-deploy-jwt-secret-2026"
+      access-expire: 1800
+      refresh-expire: 604800
+
+    consul:
+      enabled: true
+      address: "consul.mb.svc.cluster.local:8500"
+      service-name: "workflow-service"
+      service-addr: "mb-workflow"
+
+    log:
+      level: info
+      format: json
+      output: stdout
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mb-workflow
+  namespace: mb
+  labels:
+    app: mb-workflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mb-workflow
+  template:
+    metadata:
+      labels:
+        app: mb-workflow
+    spec:
+      initContainers:
+        - name: wait-postgres
+          image: postgres:16-alpine
+          command: ["sh", "-c", "until pg_isready -h postgres.mb.svc.cluster.local -p 5432 -U mb_user; do echo 'waiting for postgres...'; sleep 2; done;"]
+        - name: wait-redis
+          image: redis:7-alpine
+          command: ["sh", "-c", "until redis-cli -h redis.mb.svc.cluster.local ping; do echo 'waiting for redis...'; sleep 2; done;"]
+        - name: wait-consul
+          image: curlimages/curl:latest
+          command: ["sh", "-c", "until curl -s http://consul.mb.svc.cluster.local:8500/v1/status/leader; do echo 'waiting for consul...'; sleep 2; done;"]
+      containers:
+        - name: mb-workflow
+          image: mb-workflow:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8083
+          volumeMounts:
+            - name: config
+              mountPath: /etc/workflow-service/config.yaml
+              subPath: config.yaml
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8083
+            initialDelaySeconds: 20
+            periodSeconds: 15
+      volumes:
+        - name: config
+          configMap:
+            name: workflow-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mb-workflow
+  namespace: mb
+spec:
+  selector:
+    app: mb-workflow
+  ports:
+    - port: 8083
+      targetPort: 8083

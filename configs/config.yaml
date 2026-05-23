@@ -2,13 +2,13 @@ server:
   port: 8081
   mode: debug
 
-mysql:
+postgres:
   host: 127.0.0.1
-  port: 3306
+  port: 5432
   username: mb_user
   password: ""
   database: management_backend
-  charset: utf8mb4
+  sslmode: disable
   max-idle-conns: 10
   max-open-conns: 100
   log-level: warn

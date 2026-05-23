@@ -14,12 +14,12 @@ type TenantResolver = pkgtenant.TenantResolver
 
 // NewTenantResolver 创建租户解析器（从全局配置读取参数）
 func NewTenantResolver() *TenantResolver {
-	mysqlCfg := pkgtenant.MySQLConfig{
-		Host:     config.C.MySQL.Host,
-		Port:     config.C.MySQL.Port,
-		Username: config.C.MySQL.Username,
-		Password: config.C.MySQL.Password,
-		Charset:  config.C.MySQL.Charset,
+	pgCfg := pkgtenant.PostgresConfig{
+		Host:     config.C.Postgres.Host,
+		Port:     config.C.Postgres.Port,
+		Username: config.C.Postgres.Username,
+		Password: config.C.Postgres.Password,
+		SSLMode:  config.C.Postgres.SSLMode,
 	}
 	tenantCfg := pkgtenant.TenantConfig{
 		MaxPoolSize:       config.C.Tenant.MaxPoolSize,
@@ -27,7 +27,7 @@ func NewTenantResolver() *TenantResolver {
 		MaxConnsPerTenant: config.C.Tenant.MaxConnsPerTenant,
 		DBNamePrefix:      config.C.Tenant.DBNamePrefix,
 	}
-	return pkgtenant.NewTenantResolver(mysqlCfg, tenantCfg)
+	return pkgtenant.NewTenantResolver(pgCfg, tenantCfg)
 }
 
 // GetDB 获取租户数据库连接（便捷方法，委托到 TenantResolver）

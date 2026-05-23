@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: backend-config
+  name: system-config
   namespace: mb
 data:
   config.yaml: |
@@ -9,13 +9,13 @@ data:
       port: 8081
       mode: release
 
-    mysql:
-      host: mysql.mb.svc.cluster.local
-      port: 3306
+    postgres:
+      host: postgres.mb.svc.cluster.local
+      port: 5432
       username: mb_user
       password: "mb_pass_2026"
       database: management_backend
-      charset: utf8mb4
+      sslmode: disable
       max-idle-conns: 10
       max-open-conns: 100
       log-level: warn
@@ -29,7 +29,7 @@ data:
         enabled: false
 
     jwt:
-      secret: "k8s-deploy-jwt-secret-change-in-prod"
+      secret: "k8s-deploy-jwt-secret-2026"
       access-expire: 1800
       refresh-expire: 604800
       issuer: management-backend
@@ -56,56 +56,55 @@ data:
       db-name-prefix: "mb_tenant_"
 
     cors:
-      allow-origins:
+      allowed-origins:
         - "*"
-      allow-methods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allow-headers:
-        - "*"
-      expose-headers:
-        - Content-Length
-      allow-credentials: true
-      max-age: 43200
 
-    auth:
-      login-lock:
-        enabled: true
-        max-retries: 5
-        lock-duration: 300
-      blacklist:
-        enabled: true
+    oss:
+      type: minio
+      minio:
+        endpoint: minio.mb.svc.cluster.local:9000
+        access-key: minioadmin
+        secret-key: minioadmin
+        bucket: management
+        use-ssl: false
 
-    casbin:
-      model: ""
-      policy-adapter: db
+    login-security:
+      max-fail-count: 5
+      rate-limit-per-ip: 20
+      rate-limit-per-acct: 5
+      password-min-len: 8
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mb-backend
+  name: mb-system
   namespace: mb
   labels:
-    app: mb-backend
+    app: mb-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mb-backend
+      app: mb-system
   template:
     metadata:
       labels:
-        app: mb-backend
+        app: mb-system
     spec:
+      initContainers:
+        - name: wait-postgres
+          image: postgres:16-alpine
+          command: ["sh", "-c", "until pg_isready -h postgres.mb.svc.cluster.local -p 5432 -U mb_user; do echo 'waiting for postgres...'; sleep 2; done;"]
+        - name: wait-redis
+          image: redis:7-alpine
+          command: ["sh", "-c", "until redis-cli -h redis.mb.svc.cluster.local ping; do echo 'waiting for redis...'; sleep 2; done;"]
       containers:
-        - name: mb-backend
-          image: mb-backend:latest
+        - name: mb-system
+          image: mb-system:latest
           imagePullPolicy: Never
           ports:
             - containerPort: 8081
+            - containerPort: 9081
           volumeMounts:
             - name: config
               mountPath: /app/configs/config.yaml
@@ -115,7 +114,7 @@ spec:
               memory: "128Mi"
               cpu: "100m"
             limits:
-              memory: "256Mi"
+              memory: "512Mi"
               cpu: "500m"
           readinessProbe:
             httpGet:
@@ -133,16 +132,20 @@ spec:
       volumes:
         - name: config
           configMap:
-            name: backend-config
+            name: system-config
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: mb-backend
+  name: mb-system
   namespace: mb
 spec:
   selector:
-    app: mb-backend
+    app: mb-system
   ports:
-    - port: 8081
+    - name: http
+      port: 8081
       targetPort: 8081
+    - name: grpc
+      port: 9081
+      targetPort: 9081

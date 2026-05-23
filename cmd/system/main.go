@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -51,16 +51,16 @@ func main() {
 		zapLogger.Fatal("雪花ID初始化失败", zap.Error(err))
 	}
 
-	// 连接 MySQL
-	db, err := gorm.Open(mysql.Open(config.C.MySQL.DSN()), &gorm.Config{
+	// 连接 PostgreSQL
+	db, err := gorm.Open(postgres.Open(config.C.Postgres.DSN()), &gorm.Config{
 		Logger: logger.Default.LogMode(logger.Warn),
 	})
 	if err != nil {
-		zapLogger.Fatal("MySQL 连接失败", zap.Error(err))
+		zapLogger.Fatal("PostgreSQL 连接失败", zap.Error(err))
 	}
 	sqlDB, _ := db.DB()
-	sqlDB.SetMaxIdleConns(config.C.MySQL.MaxIdleConns)
-	sqlDB.SetMaxOpenConns(config.C.MySQL.MaxOpenConns)
+	sqlDB.SetMaxIdleConns(config.C.Postgres.MaxIdleConns)
+	sqlDB.SetMaxOpenConns(config.C.Postgres.MaxOpenConns)
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
 	// 连接 Redis（支持 Sentinel）

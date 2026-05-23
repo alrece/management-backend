@@ -19,8 +19,8 @@ declare const __VLS_export: _$vue.DefineComponent<__VLS_PublicProps, {}, {}, {},
   onOpened?: ((...args: any[]) => any) | undefined;
 }>, {
   bordered: boolean;
-  buttonAlign: "center" | "end" | "start";
   centered: boolean;
+  buttonAlign: "center" | "end" | "start";
 }, {}, {}, {}, string, _$vue.ComponentProvideOptions, false, {}, any>;
 declare const _default: typeof __VLS_export;
 //#endregion

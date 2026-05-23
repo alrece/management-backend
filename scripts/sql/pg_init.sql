@@ -1,0 +1,406 @@
+-- ==========================================
+-- management-backend PostgreSQL 初始化脚本
+-- MySQL → PG 类型映射:
+--   DATETIME → TIMESTAMPTZ, TINYINT → SMALLINT,
+--   BIT(1) → SMALLINT, AUTO_INCREMENT → 移除(雪花ID)
+-- ==========================================
+
+-- 租户表（默认库，不受租户过滤）
+CREATE TABLE IF NOT EXISTS sys_tenant (
+    id              BIGINT       NOT NULL,
+    tenant_name     VARCHAR(100) NOT NULL,
+    contact_name    VARCHAR(30)  DEFAULT '',
+    contact_mobile  VARCHAR(20)  DEFAULT '',
+    db_name         VARCHAR(100) DEFAULT '',
+    status          SMALLINT     NOT NULL DEFAULT 0,
+    expire_time     TIMESTAMPTZ  DEFAULT NULL,
+    init_status     SMALLINT     NOT NULL DEFAULT 0,
+    remark          VARCHAR(500) DEFAULT '',
+    creator         BIGINT       DEFAULT NULL,
+    create_time     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater         BIGINT       DEFAULT NULL,
+    update_time     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted         SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_tenant IS '租户表';
+
+-- 部门表
+CREATE TABLE IF NOT EXISTS sys_dept (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    parent_id   BIGINT       NOT NULL DEFAULT 0,
+    ancestors   VARCHAR(200) DEFAULT '',
+    dept_name   VARCHAR(50)  NOT NULL,
+    sort        INT          NOT NULL DEFAULT 0,
+    leader      VARCHAR(30)  DEFAULT '',
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_dept IS '部门表';
+
+-- 用户表
+CREATE TABLE IF NOT EXISTS sys_user (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    username    VARCHAR(30)  NOT NULL,
+    password    VARCHAR(100) NOT NULL,
+    nickname    VARCHAR(30)  DEFAULT '',
+    email       VARCHAR(50)  DEFAULT '',
+    mobile      VARCHAR(20)  DEFAULT '',
+    sex         SMALLINT     DEFAULT 0,
+    avatar      VARCHAR(255) DEFAULT '',
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    dept_id     BIGINT       DEFAULT NULL,
+    create_dept BIGINT       DEFAULT NULL,
+    remark      VARCHAR(500) DEFAULT '',
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_username UNIQUE (username, tenant_id)
+);
+COMMENT ON TABLE sys_user IS '用户表';
+
+-- 角色表
+CREATE TABLE IF NOT EXISTS sys_role (
+    id                  BIGINT       NOT NULL,
+    tenant_id           BIGINT       NOT NULL DEFAULT 0,
+    role_name           VARCHAR(50)  NOT NULL,
+    role_code           VARCHAR(50)  NOT NULL,
+    sort                INT          NOT NULL DEFAULT 0,
+    data_scope          SMALLINT     NOT NULL DEFAULT 1,
+    data_scope_dept_ids VARCHAR(500) DEFAULT '',
+    status              SMALLINT     NOT NULL DEFAULT 0,
+    remark              VARCHAR(500) DEFAULT '',
+    creator             BIGINT       DEFAULT NULL,
+    create_time         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater             BIGINT       DEFAULT NULL,
+    update_time         TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted             SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_role IS '角色表';
+
+-- 菜单表（不受租户过滤）
+CREATE TABLE IF NOT EXISTS sys_menu (
+    id          BIGINT       NOT NULL,
+    parent_id   BIGINT       NOT NULL DEFAULT 0,
+    menu_name   VARCHAR(50)  NOT NULL,
+    menu_type   SMALLINT     NOT NULL,
+    path        VARCHAR(200) DEFAULT '',
+    component   VARCHAR(200) DEFAULT '',
+    permission  VARCHAR(100) DEFAULT '',
+    icon        VARCHAR(50)  DEFAULT '',
+    visible     SMALLINT     NOT NULL DEFAULT 0,
+    sort        INT          NOT NULL DEFAULT 0,
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_menu IS '菜单权限表';
+
+-- 用户角色关联
+CREATE TABLE IF NOT EXISTS sys_user_role (
+    id          BIGINT   NOT NULL,
+    user_id     BIGINT   NOT NULL,
+    role_id     BIGINT   NOT NULL,
+    creator     BIGINT   DEFAULT NULL,
+    create_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updater     BIGINT   DEFAULT NULL,
+    update_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_user_role IS '用户角色关联表';
+
+-- 角色菜单关联（不受租户过滤）
+CREATE TABLE IF NOT EXISTS sys_role_menu (
+    id          BIGINT   NOT NULL,
+    role_id     BIGINT   NOT NULL,
+    menu_id     BIGINT   NOT NULL,
+    creator     BIGINT   DEFAULT NULL,
+    create_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updater     BIGINT   DEFAULT NULL,
+    update_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_role_menu IS '角色菜单关联表';
+
+-- 字典类型
+CREATE TABLE IF NOT EXISTS sys_dict_type (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    dict_name   VARCHAR(100) NOT NULL,
+    dict_type   VARCHAR(100) NOT NULL,
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    remark      VARCHAR(500) DEFAULT '',
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_dict_type UNIQUE (dict_type, tenant_id)
+);
+COMMENT ON TABLE sys_dict_type IS '字典类型表';
+
+-- 字典数据
+CREATE TABLE IF NOT EXISTS sys_dict_data (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    dict_type   VARCHAR(100) NOT NULL,
+    label       VARCHAR(100) NOT NULL,
+    value       VARCHAR(100) NOT NULL,
+    sort        INT          NOT NULL DEFAULT 0,
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    remark      VARCHAR(500) DEFAULT '',
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_dict_data IS '字典数据表';
+
+-- 用户岗位关联
+CREATE TABLE IF NOT EXISTS sys_user_post (
+    id          BIGINT   NOT NULL,
+    user_id     BIGINT   NOT NULL,
+    post_id     BIGINT   NOT NULL,
+    creator     BIGINT   DEFAULT NULL,
+    create_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updater     BIGINT   DEFAULT NULL,
+    update_time TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_user_post IS '用户岗位关联表';
+
+-- 岗位表
+CREATE TABLE IF NOT EXISTS sys_post (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    post_code   VARCHAR(50)  NOT NULL,
+    post_name   VARCHAR(100) NOT NULL,
+    sort        INT          NOT NULL DEFAULT 0,
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    remark      VARCHAR(500) DEFAULT '',
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_post IS '岗位表';
+
+-- 系统参数表
+CREATE TABLE IF NOT EXISTS sys_param (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    param_key   VARCHAR(100) NOT NULL,
+    param_value VARCHAR(500) NOT NULL,
+    param_type  SMALLINT     NOT NULL DEFAULT 1,
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    remark      VARCHAR(500) DEFAULT '',
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_param_key UNIQUE (param_key, tenant_id)
+);
+COMMENT ON TABLE sys_param IS '系统参数表';
+
+-- 通知公告表
+CREATE TABLE IF NOT EXISTS sys_notice (
+    id           BIGINT       NOT NULL,
+    tenant_id    BIGINT       NOT NULL DEFAULT 0,
+    notice_title VARCHAR(200) NOT NULL,
+    notice_type  SMALLINT     NOT NULL DEFAULT 1,
+    content      TEXT         DEFAULT NULL,
+    status       SMALLINT     NOT NULL DEFAULT 0,
+    remark       VARCHAR(500) DEFAULT '',
+    creator      BIGINT       DEFAULT NULL,
+    create_time  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater      BIGINT       DEFAULT NULL,
+    update_time  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted      SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_notice IS '通知公告表';
+
+-- 操作日志表
+CREATE TABLE IF NOT EXISTS sys_oper_log (
+    id              BIGINT       NOT NULL,
+    tenant_id       BIGINT       DEFAULT 0,
+    title           VARCHAR(100) DEFAULT '',
+    business_type   SMALLINT     DEFAULT 0,
+    method          VARCHAR(200) DEFAULT '',
+    request_url     VARCHAR(500) DEFAULT '',
+    oper_ip         VARCHAR(50)  DEFAULT '',
+    oper_user_id    BIGINT       DEFAULT 0,
+    oper_name       VARCHAR(50)  DEFAULT '',
+    request_id      VARCHAR(50)  DEFAULT '',
+    status          SMALLINT     DEFAULT 0,
+    error_msg       TEXT         DEFAULT NULL,
+    oper_time       TIMESTAMPTZ  NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_oper_log_tenant_id ON sys_oper_log(tenant_id);
+CREATE INDEX IF NOT EXISTS idx_oper_log_request_id ON sys_oper_log(request_id);
+COMMENT ON TABLE sys_oper_log IS '操作日志表';
+
+-- 登录日志表
+CREATE TABLE IF NOT EXISTS sys_login_log (
+    id              BIGINT       NOT NULL,
+    username        VARCHAR(50)  DEFAULT '',
+    login_ip        VARCHAR(50)  DEFAULT '',
+    login_location  VARCHAR(100) DEFAULT '',
+    browser         VARCHAR(50)  DEFAULT '',
+    os              VARCHAR(50)  DEFAULT '',
+    status          SMALLINT     DEFAULT 0,
+    msg             VARCHAR(200) DEFAULT '',
+    login_time      TIMESTAMPTZ  NOT NULL,
+    PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_login_log_username ON sys_login_log(username);
+COMMENT ON TABLE sys_login_log IS '登录日志表';
+
+-- 文件表
+CREATE TABLE IF NOT EXISTS sys_file (
+    id          BIGINT       NOT NULL,
+    tenant_id   BIGINT       NOT NULL DEFAULT 0,
+    file_name   VARCHAR(255) NOT NULL,
+    file_path   VARCHAR(500) NOT NULL,
+    file_type   VARCHAR(50)  DEFAULT '',
+    file_size   BIGINT       DEFAULT 0,
+    bucket      VARCHAR(100) DEFAULT '',
+    status      SMALLINT     NOT NULL DEFAULT 0,
+    creator     BIGINT       DEFAULT NULL,
+    create_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater     BIGINT       DEFAULT NULL,
+    update_time TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted     SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_file IS '文件表';
+
+-- 客户端表
+CREATE TABLE IF NOT EXISTS sys_client (
+    id           BIGINT       NOT NULL,
+    tenant_id    BIGINT       NOT NULL DEFAULT 0,
+    client_id    VARCHAR(100) NOT NULL,
+    client_name  VARCHAR(200) NOT NULL,
+    client_secret VARCHAR(200) NOT NULL,
+    redirect_uri VARCHAR(500) DEFAULT '',
+    status       SMALLINT     NOT NULL DEFAULT 0,
+    remark       VARCHAR(500) DEFAULT '',
+    creator      BIGINT       DEFAULT NULL,
+    create_time  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updater      BIGINT       DEFAULT NULL,
+    update_time  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    deleted      SMALLINT     NOT NULL DEFAULT 0,
+    PRIMARY KEY (id)
+);
+COMMENT ON TABLE sys_client IS '客户端表';
+
+-- 初始数据
+INSERT INTO sys_tenant (id, tenant_name, db_name, status, init_status) VALUES (1, '默认租户', 'management_backend', 0, 2);
+INSERT INTO sys_user (id, tenant_id, username, password, nickname, status)
+  VALUES (1, 1, 'admin', '$2a$10$VQBl2noKFPH/MSOsOq7a2.tdJqIckGw8MKTqPYxGqv3Rp7.q5mFJO', '超级管理员', 0);
+INSERT INTO sys_role (id, tenant_id, role_name, role_code, data_scope, status)
+  VALUES (1, 1, '超级管理员', 'super_admin', 1, 0);
+INSERT INTO sys_user_role (id, user_id, role_id) VALUES (1, 1, 1);
+
+-- 初始菜单：目录
+INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, permission, icon, sort, status, visible) VALUES
+(1, 0, '系统管理', 1, '/system', '', '', 'system', 1, 0, 0);
+
+-- 菜单
+INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, permission, icon, sort, status, visible) VALUES
+(2, 1, '用户管理', 2, '/system/user', 'system/user/index', '', 'user', 1, 0, 0),
+(3, 1, '角色管理', 2, '/system/role', 'system/role/index', '', 'role', 2, 0, 0),
+(4, 1, '菜单管理', 2, '/system/menu', 'system/menu/index', '', 'menu', 3, 0, 0),
+(5, 1, '部门管理', 2, '/system/dept', 'system/dept/index', '', 'dept', 4, 0, 0),
+(6, 1, '岗位管理', 2, '/system/post', 'system/post/index', '', 'post', 5, 0, 0);
+
+-- 按钮权限
+INSERT INTO sys_menu (id, parent_id, menu_name, menu_type, path, component, permission, icon, sort, status, visible) VALUES
+(100, 2, '用户新增', 3, '', '', 'system:user:create', '', 1, 0, 0),
+(101, 2, '用户修改', 3, '', '', 'system:user:update', '', 2, 0, 0),
+(102, 2, '用户删除', 3, '', '', 'system:user:delete', '', 3, 0, 0),
+(103, 2, '用户查询', 3, '', '', 'system:user:query', '', 4, 0, 0),
+(200, 3, '角色新增', 3, '', '', 'system:role:create', '', 1, 0, 0),
+(201, 3, '角色修改', 3, '', '', 'system:role:update', '', 2, 0, 0),
+(202, 3, '角色删除', 3, '', '', 'system:role:delete', '', 3, 0, 0),
+(203, 3, '角色查询', 3, '', '', 'system:role:query', '', 4, 0, 0),
+(300, 4, '菜单新增', 3, '', '', 'system:menu:create', '', 1, 0, 0),
+(301, 4, '菜单修改', 3, '', '', 'system:menu:update', '', 2, 0, 0),
+(302, 4, '菜单删除', 3, '', '', 'system:menu:delete', '', 3, 0, 0),
+(303, 4, '菜单查询', 3, '', '', 'system:menu:query', '', 4, 0, 0),
+(400, 5, '部门新增', 3, '', '', 'system:dept:create', '', 1, 0, 0),
+(401, 5, '部门修改', 3, '', '', 'system:dept:update', '', 2, 0, 0),
+(402, 5, '部门删除', 3, '', '', 'system:dept:delete', '', 3, 0, 0),
+(403, 5, '部门查询', 3, '', '', 'system:dept:query', '', 4, 0, 0),
+(500, 6, '岗位新增', 3, '', '', 'system:post:create', '', 1, 0, 0),
+(501, 6, '岗位修改', 3, '', '', 'system:post:update', '', 2, 0, 0),
+(502, 6, '岗位删除', 3, '', '', 'system:post:delete', '', 3, 0, 0),
+(503, 6, '岗位查询', 3, '', '', 'system:post:query', '', 4, 0, 0);
+
+-- 超级管理员分配所有菜单
+INSERT INTO sys_role_menu (id, role_id, menu_id) VALUES
+(1, 1, 1), (2, 1, 2), (3, 1, 3), (4, 1, 4), (5, 1, 5), (6, 1, 6),
+(10, 1, 100), (11, 1, 101), (12, 1, 102), (13, 1, 103),
+(20, 1, 200), (21, 1, 201), (22, 1, 202), (23, 1, 203),
+(30, 1, 300), (31, 1, 301), (32, 1, 302), (33, 1, 303),
+(40, 1, 400), (41, 1, 401), (42, 1, 402), (43, 1, 403),
+(50, 1, 500), (51, 1, 501), (52, 1, 502), (53, 1, 503);
+
+-- 触发器：自动更新 update_time
+CREATE OR REPLACE FUNCTION update_timestamp()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.update_time = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- 为所有含 update_time 的表创建触发器
+DO $$
+DECLARE
+    t TEXT;
+BEGIN
+    FOR t IN
+        SELECT table_name FROM information_schema.columns
+        WHERE column_name = 'update_time'
+        AND table_schema = 'public'
+        AND table_name IN (
+            'sys_tenant','sys_dept','sys_user','sys_role','sys_menu',
+            'sys_user_role','sys_role_menu','sys_dict_type','sys_dict_data',
+            'sys_user_post','sys_post','sys_param','sys_notice','sys_file','sys_client'
+        )
+        GROUP BY table_name
+    LOOP
+        EXECUTE format('
+            CREATE TRIGGER trg_%s_update
+            BEFORE UPDATE ON %I
+            FOR EACH ROW EXECUTE FUNCTION update_timestamp()', t, t);
+    END LOOP;
+END;
+$$;

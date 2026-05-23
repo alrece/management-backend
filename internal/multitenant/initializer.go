@@ -11,7 +11,7 @@ import (
 	"management-backend/pkg/errcode"
 
 	"github.com/redis/go-redis/v9"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -79,16 +79,16 @@ func (in *Initializer) doInit(ctx context.Context, tenant *smodel.Tenant) error 
 	if err := in.createDatabase(ctx, tenant.DBName); err != nil {
 		return fmt.Errorf("创建数据库失败: %w", err)
 	}
-	// 模板 SQL 由 Migrator 执行
 	return nil
 }
 
 func (in *Initializer) createDatabase(ctx context.Context, dbName string) error {
-	cfg := config.C.MySQL
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/?charset=%s&parseTime=True&loc=Local",
-		cfg.Username, cfg.Password, cfg.Host, cfg.Port, cfg.Charset)
+	cfg := config.C.Postgres
+	// 连接默认的 postgres 库来创建新数据库
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=postgres sslmode=%s",
+		cfg.Host, cfg.Port, cfg.Username, cfg.Password, cfg.SSLMode)
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return err
 	}
@@ -99,8 +99,9 @@ func (in *Initializer) createDatabase(ctx context.Context, dbName string) error 
 		}
 	}()
 
+	// PG 创建数据库（不能用事务，需直接 Exec）
 	return db.WithContext(ctx).Exec(
-		fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci", dbName),
+		fmt.Sprintf(`CREATE DATABASE "%s"`, dbName),
 	).Error
 }
 

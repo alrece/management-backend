@@ -8,7 +8,7 @@ import (
 	"management-backend/internal/config"
 
 	"github.com/pressly/goose/v3"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -37,7 +37,7 @@ func (m *Migrator) MigrateDefault(ctx context.Context) error {
 // MigrateTenant 对指定租户库执行迁移
 func (m *Migrator) MigrateTenant(ctx context.Context, tenantID int64) error {
 	// 通过默认库获取租户数据库名
-	defaultDB, err := gorm.Open(mysql.Open(config.C.MySQL.DSN()), &gorm.Config{})
+	defaultDB, err := gorm.Open(postgres.Open(config.C.Postgres.DSN()), &gorm.Config{})
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func (m *Migrator) MigrateTenant(ctx context.Context, tenantID int64) error {
 
 // MigrateAll 对所有已就绪租户执行迁移
 func (m *Migrator) MigrateAll(ctx context.Context) error {
-	defaultDB, err := gorm.Open(mysql.Open(config.C.MySQL.DSN()), &gorm.Config{})
+	defaultDB, err := gorm.Open(postgres.Open(config.C.Postgres.DSN()), &gorm.Config{})
 	if err != nil {
 		return err
 	}
@@ -90,13 +90,13 @@ func (m *Migrator) MigrateAll(ctx context.Context) error {
 }
 
 func (m *Migrator) openDefault() (*sql.DB, error) {
-	return m.openDB(config.C.MySQL.Database)
+	return m.openDB(config.C.Postgres.Database)
 }
 
 func (m *Migrator) openDB(dbName string) (*sql.DB, error) {
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?charset=%s&parseTime=True&loc=Local",
-		config.C.MySQL.Username, config.C.MySQL.Password,
-		config.C.MySQL.Host, config.C.MySQL.Port,
-		dbName, config.C.MySQL.Charset)
-	return goose.OpenDBWithDriver("mysql", dsn)
+	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=%s",
+		config.C.Postgres.Host, config.C.Postgres.Port,
+		config.C.Postgres.Username, config.C.Postgres.Password,
+		dbName, config.C.Postgres.SSLMode)
+	return goose.OpenDBWithDriver("postgres", dsn)
 }

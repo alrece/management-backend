@@ -2,34 +2,22 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 
 import { h } from 'vue';
-
 import { Tag } from 'ant-design-vue';
-
-import { z } from '#/adapter/form';
+import { useRouter } from 'vue-router';
 
 import { getCategoryTree } from '#/api/workflow/category';
+import { WORKFLOW_STATUS_OPTIONS } from '#/views/workflow/editor/types';
 
-/** 工作流状态枚举 */
-export const WORKFLOW_STATUS_OPTIONS = [
-  { label: '草稿', value: 'DRAFT' },
-  { label: '已激活', value: 'ACTIVE' },
-  { label: '已停用', value: 'INACTIVE' },
-  { label: '已失同步', value: 'DESYNCED' },
-] as const;
-
-const WORKFLOW_STATUS_MAP: Record<string, { color: string; text: string }> = {
-  DRAFT: { color: 'default', text: '草稿' },
-  ACTIVE: { color: 'green', text: '已激活' },
-  INACTIVE: { color: 'orange', text: '已停用' },
-  DESYNCED: { color: 'red', text: '已失同步' },
+const WORKFLOW_STATUS_MAP: Record<number, { color: string; text: string }> = {
+  0: { color: 'green', text: '正常' },
+  1: { color: 'orange', text: '停用' },
 };
 
-export function renderWorkflowStatusTag(status: string) {
+export function renderWorkflowStatusTag(status: number) {
   const item = WORKFLOW_STATUS_MAP[status] ?? { color: 'default', text: '未知' };
   return h(Tag, { color: item.color }, () => item.text);
 }
 
-/** 新增/修改的表单 */
 export function useFormSchema(): VbenFormSchema[] {
   return [
     {
@@ -57,15 +45,27 @@ export function useFormSchema(): VbenFormSchema[] {
       },
     },
     {
+      component: 'Select',
+      fieldName: 'triggerType',
+      label: '触发类型',
+      componentProps: {
+        options: [
+          { label: '手动', value: 'manual' },
+          { label: '定时', value: 'cron' },
+          { label: 'Webhook', value: 'webhook' },
+        ],
+        placeholder: '请选择触发类型',
+      },
+    },
+    {
       component: 'Textarea',
-      fieldName: 'paramsSchema',
-      label: '参数 Schema',
-      componentProps: { placeholder: 'JSON Schema 格式，定义流程参数结构' },
+      fieldName: 'remark',
+      label: '备注',
+      componentProps: { placeholder: '请输入备注' },
     },
   ];
 }
 
-/** 列表的搜索表单 */
 export function useGridFormSchema(): VbenFormSchema[] {
   return [
     {
@@ -87,30 +87,15 @@ export function useGridFormSchema(): VbenFormSchema[] {
   ];
 }
 
-/** 列表的字段 */
 export function useGridColumns(): VxeTableGridOptions['columns'] {
   return [
     { type: 'checkbox', width: 40 },
     { field: 'id', title: '编号', minWidth: 80 },
     { field: 'name', title: '流程名称', minWidth: 180 },
-    { field: 'categoryId', title: '分类', minWidth: 100 },
-    {
-      field: 'status',
-      title: '状态',
-      minWidth: 90,
-      slots: { default: 'status' },
-    },
-    {
-      field: 'createdAt',
-      title: '创建时间',
-      minWidth: 170,
-      formatter: 'formatDateTime',
-    },
-    {
-      title: '操作',
-      width: 260,
-      fixed: 'right',
-      slots: { default: 'actions' },
-    },
+    { field: 'triggerType', title: '触发类型', minWidth: 100 },
+    { field: 'version', title: '版本', minWidth: 60 },
+    { field: 'status', title: '状态', minWidth: 90, slots: { default: 'status' } },
+    { field: 'createTime', title: '创建时间', minWidth: 170, formatter: 'formatDateTime' },
+    { title: '操作', width: 300, fixed: 'right', slots: { default: 'actions' } },
   ];
 }

@@ -26,6 +26,7 @@
     "#/*": "./src/*"
   },
   "dependencies": {
+    "@dagrejs/dagre": "^3.0.0",
     "@form-create/ant-design-vue": "catalog:",
     "@form-create/antd-designer": "catalog:",
     "@tinymce/tinymce-vue": "catalog:",
@@ -44,6 +45,10 @@
     "@vben/types": "workspace:*",
     "@vben/utils": "workspace:*",
     "@videojs-player/vue": "catalog:",
+    "@vue-flow/background": "^1.3.2",
+    "@vue-flow/controls": "^1.1.3",
+    "@vue-flow/core": "^1.48.2",
+    "@vue-flow/minimap": "^1.5.4",
     "@vueuse/core": "catalog:",
     "@vueuse/integrations": "catalog:",
     "ant-design-vue": "catalog:",

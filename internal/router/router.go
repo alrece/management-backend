@@ -11,6 +11,12 @@ import (
 	"management-backend/internal/module/system/handler"
 	"management-backend/internal/module/system/repository"
 	"management-backend/internal/module/system/service"
+	wfmodule "management-backend/internal/module/workflow"
+	wfengine "management-backend/internal/module/workflow/engine"
+	wfhandler "management-backend/internal/module/workflow/handler"
+	wfnodes "management-backend/internal/module/workflow/engine/nodes"
+	wfrepo "management-backend/internal/module/workflow/repository"
+	wfservice "management-backend/internal/module/workflow/service"
 	grpchandler "management-backend/internal/grpc/handler"
 
 	"github.com/gin-gonic/gin"
@@ -80,6 +86,34 @@ func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logge
 	authHandler := handler.NewAuthHandler(userSvc, loginLock, logger)
 	fileHandler := handler.NewFileHandler(fileSvc)
 
+	// 工作流模块 — 引擎
+	wfRegistry := wfengine.NewNodeRegistry()
+	wfRegistry.Register(wfnodes.NewHTTPRequestHandler())
+	wfRegistry.Register(wfnodes.NewSQLQueryHandler(db))
+	wfRegistry.Register(wfnodes.NewConditionHandler())
+	wfRegistry.Register(wfnodes.NewDelayHandler())
+	wfRegistry.Register(wfnodes.NewTransformHandler())
+	wfRegistry.Register(wfnodes.NewLogMessageHandler())
+	wfRegistry.Register(wfnodes.NewSendEmailHandler(wfnodes.EmailConfig{}))
+
+	// 工作流模块 — Repository → Service → Handler
+	wfWorkflowRepo := wfrepo.NewWorkflowRepo(db)
+	wfExecutionRepo := wfrepo.NewExecutionRepo(db)
+	wfNodeLogRepo := wfrepo.NewNodeLogRepo(db)
+	wfTriggerRepo := wfrepo.NewTriggerRepo(db)
+	wfCategoryRepo := wfrepo.NewCategoryRepo(db)
+
+	wfExecutor := wfservice.NewExecutor(wfRegistry, wfExecutionRepo, wfNodeLogRepo, 50)
+	_ = wfservice.NewTriggerService(wfTriggerRepo, wfExecutor)
+	wfWorkflowSvc := wfservice.NewWorkflowService(wfWorkflowRepo, wfExecutor, wfRegistry)
+	wfExecSvc := wfservice.NewExecutionService(wfExecutionRepo, wfNodeLogRepo)
+	wfCategorySvc := wfservice.NewCategoryService(wfCategoryRepo)
+
+	wfWorkflowHandler := wfhandler.NewWorkflowHandler(wfWorkflowSvc)
+	wfExecutionHandler := wfhandler.NewExecutionHandler(wfExecSvc)
+	wfWebhookHandler := wfhandler.NewWebhookHandler(wfWorkflowSvc)
+	wfCategoryHandler := wfhandler.NewCategoryHandler(wfCategorySvc)
+
 	// 全局中间件
 	engine.Use(pkgmiddleware.SecurityHeaders())
 
@@ -110,6 +144,9 @@ func Setup(engine *gin.Engine, db *gorm.DB, rdb *redis.Client, logger *zap.Logge
 
 		system.RegisterRoutes(authed, userHandler, tenantHandler, roleHandler, menuHandler,
 			deptHandler, postHandler, dictHandler, paramHandler, noticeHandler, logHandler, profileHandler, fileHandler)
+
+		// 工作流模块路由
+		wfmodule.RegisterRoutes(authed, engine, wfWorkflowHandler, wfExecutionHandler, wfWebhookHandler, wfCategoryHandler)
 	}
 
 	return func() {
